@@ -82,26 +82,27 @@ class Truck:
     time = datetime
 
 
-
-#packageObjList = []  # list of all package objects
+# packageObjList = []  # list of all package objects
 
 class HashTable:
     hashTable = {}  # blank hashtable (dictionary)
     for i in range(10):
         hashTable.__setitem__(i, [])
 
-    #imports the WGUPS Package File
+    # imports the WGUPS Package File
     import csv
     with open('WGUPS Package File.csv') as csvfile:
         csvreader = csv.reader(csvfile, delimiter=",")
         next(csvreader)  # skips over header row of CSV file
         for row in csvreader:
-            packageObj = Package(row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7]) # creates a package object
-            bucket = int(packageObj.packageID) % 10     # determines which bucket to place the object in
-            hashTable[bucket].append(packageObj)        # places the packageobj in the corresponding bucket
+            packageObj = Package(row[0], row[1], row[2], row[3], row[4], row[5], row[6],
+                                 row[7])  # creates a package object
+            bucket = int(packageObj.packageID) % 10  # determines which bucket to place the object in
+            hashTable[bucket].append(packageObj)  # places the packageobj in the corresponding bucket
 
     def hashInsert(self, ID, address, deadline, city, zipcode, weight, status):
-        packageObj = Package(ID, address, city, '', zipcode, deadline, weight, '')  # the first blank variable is the "state" variable, and the second blank variable is the "special instructions"
+        packageObj = Package(ID, address, city, '', zipcode, deadline, weight,
+                             '')  # the first blank variable is the "state" variable, and the second blank variable is the "special instructions"
         packageObj.status = status
         bucket = int(packageObj.packageID) % 10  # determines which bucket to place the object in
         self.hashTable[bucket].append(packageObj)  # places the packageobj in the corresponding bucket
@@ -114,19 +115,90 @@ class HashTable:
         for i in tempList:
             print(i.packageID)
             if int(i.packageID) == ID:
-                print("test successful")
+                print("Package ID: " + i.packageID + "\n" + "Address: " + i.packageAddress + "\n" +
+                      "Deadline: " + i.deadline + "\n" + "City: " + i.city + "\n" + "Zipcode: " + i.zipCode +
+                      "\n" + "Weight: " + i.mass + "\n" + "Status: " + i.status)
+
+
+# import distance data
+# how should distance data be stored?
+# hubs should be knowledgeable of nearest hub that is still remaining to be delivered to
+
+width = 28
+height = 28
+arr = [[0 for i in range(width)] for j in range(height)]
+
+
+
+class Hub:
+    hubName = ""
+    distToHubs = {}
+
+
+
+import csv
+
+with open('WGUPS Distance Table.csv') as csvfile:
+    csvreader = csv.reader(csvfile, delimiter=',')
+    count = 0
+    for row in csvreader:                       # this for loop populates the data from the csv file into the arr variable
+        for i in range(0, len(arr), 1):
+            arr[count][i] = row[i]
+        count = count + 1
+
+# for each hub name , until hub name = hub name, traverse rows... then once the condition is satisfied (i.e., hub name == hub name, traverse column
+totalHubs = 27
+hubList = [Hub()]*27
+print(hubList)
+
+for i in range(1, len(arr), 1):
+    print("i variable is: ", i)
+    hubList[i-1].hubName = arr[i][0]        # gets name of hub in first column
+    print("Hub Name: ", hubList[i-1].hubName)
+    for j in range(1, len(arr), 1):
+        if i >= j:
+            # sets dictionary key-value pair. Key = hub name, value = distance
+            hubList[i-1].distToHubs.__setitem__(arr[0][j], arr[i][j])
+
+        if i < j:                # once i < j, iterations traverse a rows rather than columns
+            hubList[i-1].distToHubs.__setitem__(arr[j][0], arr[j][i])
 
 
 
 
 
-obj = HashTable()
-obj.hashLookUp(33)
 
 
 
 
 
 
-#var = hashTable.__getitem__(0)[0]
-#print(var.packageAddress)
+
+
+
+
+
+
+
+
+#for row in arr:        # prints arr
+    #print(row)
+
+# the algorithm should determine which location is closest, but also compare priority based on deadlines. For example... x location is closest, but if i go to x, will I have time to get to the next location if needed?
+# the algorithm should know where it currently is and what is the nearest destination to travel to.
+# To determine if you have time to go to location x while still having time to go to location y afterward that has a specific time priority...
+# create separate function that determines the distance between a given location to the location with the time restriction
+
+# trucks need to have packages loaded onto them
+
+# packages need to be tracked when they are dropped off
+
+# each truck object needs to keep track of time
+
+
+# obj = HashTable()
+# obj.hashLookUp(33)
+
+
+# var = hashTable.__getitem__(0)[0]
+# print(var.packageAddress)
