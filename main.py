@@ -100,6 +100,7 @@ class HashTable:
             bucket = int(packageObj.packageID) % 10  # determines which bucket to place the object in
             hashTable[bucket].append(packageObj)  # places the packageobj in the corresponding bucket
 
+
     def hashInsert(self, ID, address, deadline, city, zipcode, weight, status):
         packageObj = Package(ID, address, city, '', zipcode, deadline, weight,
                              '')  # the first blank variable is the "state" variable, and the second blank variable is the "special instructions"
@@ -113,31 +114,30 @@ class HashTable:
         tempList = self.hashTable.get(tempVar)
         print(tempList)
         for i in tempList:
-            print(i.packageID)
             if int(i.packageID) == ID:
                 print("Package ID: " + i.packageID + "\n" + "Address: " + i.packageAddress + "\n" +
                       "Deadline: " + i.deadline + "\n" + "City: " + i.city + "\n" + "Zipcode: " + i.zipCode +
                       "\n" + "Weight: " + i.mass + "\n" + "Status: " + i.status)
 
+hashtable = HashTable()
+hashtable.hashLookUp(13)
 
 # import distance data
 # how should distance data be stored?
 # hubs should be knowledgeable of nearest hub that is still remaining to be delivered to
 
+"""This section of code establishes the array that stores the WGUPS Distance data"""
 width = 28
 height = 28
 arr = [[0 for i in range(width)] for j in range(height)]
-
-
 
 class Hub:
     hubName = ""
     distToHubs = {}
 
 
-
+"""This section of code imports the WGUPS Distance Data and stores it into the arr array variable"""
 import csv
-
 with open('WGUPS Distance Table.csv') as csvfile:
     csvreader = csv.reader(csvfile, delimiter=',')
     count = 0
@@ -147,27 +147,39 @@ with open('WGUPS Distance Table.csv') as csvfile:
         count = count + 1
 
 # for each hub name , until hub name = hub name, traverse rows... then once the condition is satisfied (i.e., hub name == hub name, traverse column
+"""This section of code populates Hub objects with information such as the hub name and a dictionary of hubs with their distances stored as values"""
 totalHubs = 27
-hubList = [Hub()]*27
-print(hubList)
+hubList = []
 
 for i in range(1, len(arr), 1):
-    print("i variable is: ", i)
-    hubList[i-1].hubName = arr[i][0]        # gets name of hub in first column
-    print("Hub Name: ", hubList[i-1].hubName)
+    hubList.append(Hub())
+    hubList[i-1].hubName = arr[i][0]  # gets name of hub in first column
+    tempDict = {}
     for j in range(1, len(arr), 1):
         if i >= j:
             # sets dictionary key-value pair. Key = hub name, value = distance
-            hubList[i-1].distToHubs.__setitem__(arr[0][j], arr[i][j])
+            tempDict[arr[0][j]] = arr[i][j]
 
         if i < j:                # once i < j, iterations traverse a rows rather than columns
-            hubList[i-1].distToHubs.__setitem__(arr[j][0], arr[j][i])
+            tempDict[arr[j][0]] = arr[j][i]
+    hubList[i-1].distToHubs = tempDict
 
+""" # Determines number of locations packages need to be delivered to and their addresses 
+tempList1 = []
+with open('WGUPS Package File.csv') as csvfile:
+    csvreader = csv.reader(csvfile, delimiter=",")
+    next(csvreader)  # skips over header row of CSV file
+    for row in csvreader:
+        if not(tempList1.__contains__(row[1])):
+            tempList1.append(row[1])
 
+print(len(tempList1)) """
 
-
-
-
+# at this point, all hubs are aware of distances to other hubs relative to itself
+# determine algorithm that (1) determines nearest neighbor... this must determine neaarest neighbor for truck1, then truck 2 (i.e., alternating)... truck 1 & truck 2 must pull
+# from the same list
+# check for deadlines
+# check for special notes
 
 
 
