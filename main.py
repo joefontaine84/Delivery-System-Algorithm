@@ -83,7 +83,7 @@ class Truck:
 
 
 # packageObjList = []  # list of all package objects
-
+destinationList = []
 class HashTable:
     hashTable = {}  # blank hashtable (dictionary)
     for i in range(10):
@@ -97,6 +97,10 @@ class HashTable:
         for row in csvreader:
             packageObj = Package(row[0], row[1], row[2], row[3], row[4], row[5], row[6],
                                  row[7])  # creates a package object
+
+            if not(destinationList.__contains__(row[1])):
+                destinationList.append(row[1])
+
             bucket = int(packageObj.packageID) % 10  # determines which bucket to place the object in
             hashTable[bucket].append(packageObj)  # places the packageobj in the corresponding bucket
 
@@ -182,17 +186,6 @@ print(len(tempList1)) """
 # check for special notes
 
 
-
-
-
-
-
-
-
-
-
-
-
 #for row in arr:        # prints arr
     #print(row)
 
@@ -207,6 +200,8 @@ print(len(tempList1)) """
 
 # each truck object needs to keep track of time
 
+# route should be adaptive
+
 
 # obj = HashTable()
 # obj.hashLookUp(33)
@@ -214,3 +209,29 @@ print(len(tempList1)) """
 
 # var = hashTable.__getitem__(0)[0]
 # print(var.packageAddress)
+
+def getKey(value, dictionary):
+    keys = dictionary.keys()
+    for i in keys:
+        if dictionary[i] == value:
+            return i
+
+"""Determines closest hub to current location that is provided"""
+def nearestNeighbor(currentHubName):                # hub name entered should be in the form of "hubList[index].hubName"
+    tempDict = {}
+    for i in hubList:
+        if i.hubName == currentHubName:
+            tempDict = i.distToHubs
+            minimum = min(tempDict.values())
+            del tempDict[getKey(minimum, tempDict)] # deletes the hub with distance zero, as the hub with distance zero is the currrent location
+            minimum = min(tempDict.values())
+            closestHub = getKey(minimum, tempDict)
+            print(closestHub)
+
+
+
+
+
+
+nearestNeighbor(hubList[1].hubName)
+print(destinationList)
