@@ -44,6 +44,7 @@ Assumptions:
 
 •   The day ends when all 40 packages have been delivered."""
 import datetime
+import math
 
 
 # Outline:
@@ -78,12 +79,14 @@ class Package:
 
 class Truck:
     packageList = []
+    destinations = []
     speedMPH = 18
     time = datetime
+    name = ""
 
-
-# packageObjList = []  # list of all package objects
-destinationList = []
+packageObjList = []  # list of all package objects
+destinations = {}
+startingPoint = "4001 South 700 East"
 class HashTable:
     hashTable = {}  # blank hashtable (dictionary)
     for i in range(10):
@@ -98,9 +101,12 @@ class HashTable:
             packageObj = Package(row[0], row[1], row[2], row[3], row[4], row[5], row[6],
                                  row[7])  # creates a package object
 
-            if not(destinationList.__contains__(row[1])):
-                destinationList.append(row[1])
+            if row[7].__contains__("delay"):
+                packageObj.status = "Delayed"
+            else:
+                packageObj.status = "Ready for delivery"
 
+            packageObjList.append(packageObj)
             bucket = int(packageObj.packageID) % 10  # determines which bucket to place the object in
             hashTable[bucket].append(packageObj)  # places the packageobj in the corresponding bucket
 
@@ -137,7 +143,9 @@ arr = [[0 for i in range(width)] for j in range(height)]
 
 class Hub:
     hubName = ""
+    hubAddress = ""
     distToHubs = {}
+    specificTruck = ""
 
 
 """This section of code imports the WGUPS Distance Data and stores it into the arr array variable"""
@@ -151,6 +159,14 @@ with open('WGUPS Distance Table.csv') as csvfile:
         count = count + 1
 
 # for each hub name , until hub name = hub name, traverse rows... then once the condition is satisfied (i.e., hub name == hub name, traverse column
+
+
+def getKey(value, dictionary):
+    keys = dictionary.keys()
+    for i in keys:
+        if dictionary[i] == value:
+            return i
+
 """This section of code populates Hub objects with information such as the hub name and a dictionary of hubs with their distances stored as values"""
 totalHubs = 27
 hubList = []
@@ -158,6 +174,7 @@ hubList = []
 for i in range(1, len(arr), 1):
     hubList.append(Hub())
     hubList[i-1].hubName = arr[i][0]  # gets name of hub in first column
+    #destinationDict[hubList[i-1].hubName] = 0
     tempDict = {}
     for j in range(1, len(arr), 1):
         if i >= j:
@@ -167,6 +184,8 @@ for i in range(1, len(arr), 1):
         if i < j:                # once i < j, iterations traverse a rows rather than columns
             tempDict[arr[j][0]] = arr[j][i]
     hubList[i-1].distToHubs = tempDict
+    minimum = min(tempDict.values())
+    del tempDict[getKey(minimum, tempDict)]
 
 """ # Determines number of locations packages need to be delivered to and their addresses 
 tempList1 = []
@@ -210,28 +229,183 @@ print(len(tempList1)) """
 # var = hashTable.__getitem__(0)[0]
 # print(var.packageAddress)
 
-def getKey(value, dictionary):
-    keys = dictionary.keys()
-    for i in keys:
-        if dictionary[i] == value:
-            return i
+
+
+def sortDistToHubs (currentHub):
+
+    tempDict = {}
+    for i in range(0, len(hubList), 1):
+        if hubList[i].hubName == currentHub:
+            tempDict = dict(sorted(hubList[i].distToHubs.items(), key=lambda item : float(item[1])))
+            return tempDict
+
+
+def packageAddressToHub (packageAddress):
+    for i in range(0, len(hubList), 1):
+        if hubList[i].hubName.__contains__(packageAddress):
+            return hubList[i].hubName
+
+def packagesReady (objList):
+    temparr = []
+    for obj in objList:
+        if obj.status == "Ready for delivery":
+            temparr.append(obj)
+    return temparr
+
+
+def getNearest(currentLocation, value):
+    for hub in hubList:
+        if hub.hubName == currentLocation:
+            tempDict = sortDistToHubs(hub.hubName)
+            items = list(tempDict.items())
+            selecteditem = items[value]     # returns item set (e.g., ('Cottonwood Regional Softball Complex\n 4300 S 1300 E', '1.9')
+            return selecteditem
+
+def packagesByHub (hub):
+    tempList = packagesReady(packageObjList)
+    newArr = []
+    for package in tempList:
+        if hub.hubName.__contains__(package.packageAddress):
+            newArr.append(package)
+    return newArr
+
+def getHubObjByName (hubName):
+    for hub in hubList:
+        if hub.hubName == hubName:
+            return hub
+
+
+truck1 = Truck()
+truck1.name = "Truck 1"
+truck2 = Truck()
+truck2.name = "Truck 2"
+numTrucks = 2
+startingPointCount = 0
+mainHub = hubList[0].hubName
 
 """Determines closest hub to current location that is provided"""
-def nearestNeighbor(currentHubName):                # hub name entered should be in the form of "hubList[index].hubName"
-    tempDict = {}
-    for i in hubList:
-        if i.hubName == currentHubName:
-            tempDict = i.distToHubs
-            minimum = min(tempDict.values())
-            del tempDict[getKey(minimum, tempDict)] # deletes the hub with distance zero, as the hub with distance zero is the currrent location
-            minimum = min(tempDict.values())
-            closestHub = getKey(minimum, tempDict)
-            print(closestHub)
+start = True
+packages = packagesReady(packageObjList)
+destinationList = []
+destinationListCopy = []                            # intended to keep track of initial length of destination list
+for obj in packages:
+    hub = packageAddressToHub(obj.packageAddress)
+    if not(destinationList.__contains__(hub)):
+        destinationList.append(hub)
+        destinationListCopy.append(hub)
 
-
-
-
-
-
-nearestNeighbor(hubList[1].hubName)
 print(destinationList)
+print(len(destinationList))
+
+for package in packageObjList:
+    if package.specialNotes.__contains__("truck 2"):
+        truck2.packageList.append(package)
+        var = packageAddressToHub(package.packageAddress)
+        truck2.destinations.append(var)
+        destinationList.remove(var)
+def loadPackages(currentHub, truck):
+    i = 0
+    found = False
+    # compare currentAddress to address in destinationDict
+    while (len(truck.destinations) < (len(destinationListCopy)/2)) and len(destinationList) != 0:
+        while found == False:
+            nearest = getNearest(currentHub, i)
+            if destinationList.__contains__(nearest[0]) and nearest[0] != mainHub:
+                found == True
+                truck.destinations.append(nearest[0])
+                packagesToLoad = packagesByHub(getHubObjByName(nearest[0]))
+                for package in packagesToLoad:
+                    truck.packageList.append(package)
+                destinationList.remove(nearest[0])
+                print("Call of load packages successful.Truck destinationList:", len(truck.destinations))
+                loadPackages(nearest[0], truck)
+            else:
+                i += 1
+
+
+    """if destinationDict.__contains__(currentHub):
+        # if currentAddress is in destinationDict, get the distToHubs dictionary that corresponds witht the current address:
+        for i in range (0, len(hubList), 1):
+            if hubList[i].hubName.__contains__(currentHub): # once the corresponding distToHubs dictionary has been found, delete first min value (this has a distance value of zero)
+                tempDict = hubList[j].distToHubs
+                minimum = min(tempDict.values())
+                del tempDict[getKey(minimum, tempDict)]
+                minimum = min(tempDict.values())"""
+
+
+
+
+    # if currentAddress is not in destinationDict
+
+
+
+
+
+
+"""global found, startingPointCount
+    found = False
+    tempDict = {}
+    for key in destinationList:
+        if key == currentAddress:                # this for loop is to determine if the current address provides matches any of the addresses in the destination list
+            for j in range(0, len(hubList), 1):                 # this for loop is to determine which hub corresponds with the destination/current address
+                if hubList[j].hubName.__contains__(currentAddress):
+                    tempDict = hubList[j].distToHubs
+                    minimum = min(tempDict.values())
+                    del tempDict[getKey(minimum, tempDict)] # deletes the hub with distance zero, as the hub with distance zero is the currrent location
+
+                    while found == False:            # this code block determines if the selected nearest neighbor remains in the destination list (the other truck could have already visited)
+                        minimum = min(tempDict.values())            # if the nearest neighbor was already visited, this determines the next closest location.
+                        closestHub = getKey(minimum, tempDict)
+
+                        if key
+
+
+
+                        for key in destinationList:
+                            print("k: ", k)
+                            if closestHub.__contains__(key):         # determines if closestHub selected is still in the destination list
+
+                                if destinationList
+
+
+                                print(destinationList[k])
+                                found = True
+                                print(startingPointCount)
+                                print(truck.name, " traveling from ", currentAddress, " to ", closestHub)
+                                truck.packageList.append(closestHub)
+                                if currentAddress == startingPoint and startingPointCount != numTrucks-1:
+                                    startingPointCount = startingPointCount + 1
+                                    print(startingPointCount)
+                                    break
+                                else:
+                                    print("test2")
+                                    del destinationList[destinationList.index(currentAddress)]     #deletes the address before
+
+                            if k == (len(destinationList) - 1) and found == False:
+                                del tempDict[getKey(minimum, tempDict)]
+    if len(destinationList) == 0:
+        print("complete")"""
+
+# algorithm so far determines nearest address based on provided address
+# should algorithm be run as is once to determine most efficient path for each truck simply to see which packages should be loaded onto which truck?
+# a more advanced portion of the algorithm, when called a second time, will actually execute the truck route based on delivery deadlines and which packages need to be put on
+# particular trucks?
+x = 2
+if x == 2:
+    print("test")
+elif x == 2:
+    print("test2")
+else:
+    print("test3")
+
+loadPackages(hubList[0].hubName, truck2)
+
+
+
+
+
+
+
+
+
+
