@@ -82,7 +82,7 @@ class HashTable:
             packageObj = Package(row[0], row[1], row[2], row[3], row[4], row[5], row[6],
                                  row[7])  # creates a package object
 
-            if row[7].__contains__("delay"):
+            if row[7].__contains__("Delay"):
                 packageObj.status = "Delayed"
             else:
                 packageObj.status = "Ready for delivery"
@@ -119,10 +119,11 @@ height = 28
 arr = [[0 for i in range(width)] for j in range(height)]
 
 class Hub:
-    hubName = ""
-    hubAddress = ""
-    distToHubs = {}
-    specificTruck = ""
+    def __init__(self):
+        hubName = ""
+        hubAddress = ""
+        distToHubs = {}
+        specificTruck = ""
 
 
 """This section of code imports the WGUPS Distance Data and stores it into the arr array variable"""
@@ -165,7 +166,6 @@ for i in range(1, len(arr), 1):
 
 
 def sortDistToHubs (currentHub):
-
     tempDict = {}
     for i in range(0, len(hubList), 1):
         if hubList[i].hubName == currentHub:
@@ -222,15 +222,18 @@ packages = packagesReady(packageObjList)
 destinationList = []
 destinationListCopy = []                            # intended to keep track of initial length of destination list
 for obj in packages:
+    print(obj.packageAddress)
     hub = packageAddressToHub(obj.packageAddress)
+    print(hub, "\n")
     if not(destinationList.__contains__(hub)):
+        #print("Hub Added \n")
         destinationList.append(hub)
         destinationListCopy.append(hub)
 
-print(destinationList)
+print("STOP")
 print(len(destinationList))
 
-for package in packageObjList:
+for package in packages:
     if package.specialNotes.__contains__("truck 2"):
         hubAddress = packageAddressToHub(package.packageAddress)
         truck2.destinations.append(hubAddress)
@@ -258,10 +261,10 @@ def loadPackages(currentHub, truck):
     found = False
     # compare currentAddress to address in destinationDict
     while found == False:
-        if i != len(destinationListCopy):
+        if i <= len(destinationListCopy):
             nearest = getNearest(currentHub, i)
             print("i:", i)
-            print("nearest hub", nearest[0], "\n")
+            print("nearest hub", nearest[0])
             if destinationList.__contains__(nearest[0]) and nearest[0] != mainHub:
                 found = True
                 truck.destinations.append(nearest[0])
@@ -275,21 +278,27 @@ def loadPackages(currentHub, truck):
                     print("length of len(truck.destinations)", len(truck.destinations), "\n")
                     loadPackages(nearest[0], truck)
             else:
-                print("fail. increment i")
+                print("fail. increment i", "\n")
                 i += 1
         else:
             found = True
 
-x = 2
-if x == 2:
-    print("test")
-elif x == 2:
-    print("test2")
-else:
-    print("test3")
 
+# write code that delivers packages, tracks the time, and checks that package deadlines can be met
+
+
+
+
+
+
+
+# Load packages initially onto 2 trucks based on packages available for delivery
 loadPackages(hubList[0].hubName, truck2)
 loadPackages(hubList[0].hubName, truck1)
+
+
+
+"------------------------------TESTING----------------------------------------"
 
 
 t1 = []
@@ -307,14 +316,21 @@ for package in truck1.packageList:
 #for destination in truck1.destinations:
     #t1.append(destination)
 
-print(len(t1))
-print(len(t2))
-print(destinationList)
+"""print(sorted(t1))
+print(sorted(t2))
+print(destinationList)"""
 
-random = "13"
+time = datetime.time(8, 0)
+timeChange = datetime.timedelta(minutes=30)
+time = time + timeChange
+formattedTime = time.strftime("%I:%M %p")
+print(time)
 
-if linkedPackageIDs.__contains__(int(random)):
-    print("true")
+"""for hub in hubList:
+    print(hub.hubName, "\n")"""
+
+
+
 
 
 
