@@ -46,6 +46,7 @@ Assumptions:
 import datetime
 import math
 
+
 class Package:
     def __init__(self, packageID, packageAddress, city, state, zipCode, deadline, mass, specialNotes):
         self.packageID = packageID
@@ -58,16 +59,26 @@ class Package:
         self.specialNotes = specialNotes
         self.status = ""
 
+
 class Truck:
     def __init__(self):
         self.packageList = []
         self.destinations = []
         self.speedMPH = 18
-        self.time = datetime
+        self.date_time = datetime.datetime(2000, 1, 1, 8, 0)
         self.name = ""
+        self.milesTracker = 0
+        self.currentLocation = ""
+
+    def setNewTime(self, timeChange):
+        newDateTime = timeChange + self.date_time
+        self.date_time = newDateTime
+
 
 packageObjList = []  # list of all package objects
 startingPoint = "4001 South 700 East"
+
+
 class HashTable:
     hashTable = {}  # blank hashtable (dictionary)
     for i in range(10):
@@ -91,7 +102,6 @@ class HashTable:
             bucket = int(packageObj.packageID) % 10  # determines which bucket to place the object in
             hashTable[bucket].append(packageObj)  # places the packageobj in the corresponding bucket
 
-
     def hashInsert(self, ID, address, deadline, city, zipcode, weight, status):
         packageObj = Package(ID, address, city, '', zipcode, deadline, weight,
                              '')  # the first blank variable is the "state" variable, and the second blank variable is the "special instructions"
@@ -110,6 +120,7 @@ class HashTable:
                       "Deadline: " + i.deadline + "\n" + "City: " + i.city + "\n" + "Zipcode: " + i.zipCode +
                       "\n" + "Weight: " + i.mass + "\n" + "Status: " + i.status)
 
+
 hashtable = HashTable()
 hashtable.hashLookUp(13)
 
@@ -117,6 +128,7 @@ hashtable.hashLookUp(13)
 width = 28
 height = 28
 arr = [[0 for i in range(width)] for j in range(height)]
+
 
 class Hub:
     def __init__(self):
@@ -128,13 +140,15 @@ class Hub:
 
 """This section of code imports the WGUPS Distance Data and stores it into the arr array variable"""
 import csv
+
 with open('WGUPS Distance Table.csv') as csvfile:
     csvreader = csv.reader(csvfile, delimiter=',')
     count = 0
-    for row in csvreader:                       # this for loop populates the data from the csv file into the arr variable
+    for row in csvreader:  # this for loop populates the data from the csv file into the arr variable
         for i in range(0, len(arr), 1):
             arr[count][i] = row[i]
         count = count + 1
+
 
 # for each hub name , until hub name = hub name, traverse rows... then once the condition is satisfied (i.e., hub name == hub name, traverse column
 
@@ -144,40 +158,43 @@ def getKey(value, dictionary):
         if dictionary[i] == value:
             return i
 
+
 """This section of code populates Hub objects with information such as the hub name and a dictionary of hubs with their distances stored as values"""
 totalHubs = 27
 hubList = []
 
 for i in range(1, len(arr), 1):
     hubList.append(Hub())
-    hubList[i-1].hubName = arr[i][0]  # gets name of hub in first column
-    #destinationDict[hubList[i-1].hubName] = 0
+    hubList[i - 1].hubName = arr[i][0]  # gets name of hub in first column
+    # destinationDict[hubList[i-1].hubName] = 0
     tempDict = {}
     for j in range(1, len(arr), 1):
         if i >= j:
             # sets dictionary key-value pair. Key = hub name, value = distance
             tempDict[arr[0][j]] = arr[i][j]
 
-        if i < j:                # once i < j, iterations traverse a rows rather than columns
+        if i < j:  # once i < j, iterations traverse a rows rather than columns
             tempDict[arr[j][0]] = arr[j][i]
-    hubList[i-1].distToHubs = tempDict
+    hubList[i - 1].distToHubs = tempDict
     minimum = min(tempDict.values())
     del tempDict[getKey(minimum, tempDict)]
 
 
-def sortDistToHubs (currentHub):
+def sortDistToHubs(currentHub):
     tempDict = {}
     for i in range(0, len(hubList), 1):
         if hubList[i].hubName == currentHub:
-            tempDict = dict(sorted(hubList[i].distToHubs.items(), key=lambda item : float(item[1])))
+            tempDict = dict(sorted(hubList[i].distToHubs.items(), key=lambda item: float(item[1])))
             return tempDict
 
-def packageAddressToHub (packageAddress):
+
+def packageAddressToHub(packageAddress):
     for i in range(0, len(hubList), 1):
         if hubList[i].hubName.__contains__(packageAddress):
             return hubList[i].hubName
 
-def packagesReady (objList):
+
+def packagesReady(objList):
     temparr = []
     for obj in objList:
         if obj.status == "Ready for delivery":
@@ -190,10 +207,11 @@ def getNearest(currentLocation, value):
         if hub.hubName == currentLocation:
             tempDict = sortDistToHubs(hub.hubName)
             items = list(tempDict.items())
-            selecteditem = items[value]     # returns item set (e.g., ('Cottonwood Regional Softball Complex\n 4300 S 1300 E', '1.9')
+            selecteditem = items[value]  # returns item set (e.g., ('Cottonwood Regional Softball Complex\n 4300 S 1300 E', '1.9')
             return selecteditem
 
-def packagesByHub (hub):
+
+def packagesByHub(hub):
     tempList = packagesReady(packageObjList)
     newArr = []
     for package in tempList:
@@ -201,7 +219,8 @@ def packagesByHub (hub):
             newArr.append(package)
     return newArr
 
-def getHubObjByName (hubName):
+
+def getHubObjByName(hubName):
     for hub in hubList:
         if hub.hubName == hubName:
             return hub
@@ -220,13 +239,13 @@ linkedPackageIDs = [13, 14, 15, 16, 19]
 start = True
 packages = packagesReady(packageObjList)
 destinationList = []
-destinationListCopy = []                            # intended to keep track of initial length of destination list
+destinationListCopy = []  # intended to keep track of initial length of destination list
 for obj in packages:
     print(obj.packageAddress)
     hub = packageAddressToHub(obj.packageAddress)
     print(hub, "\n")
-    if not(destinationList.__contains__(hub)):
-        #print("Hub Added \n")
+    if not (destinationList.__contains__(hub)):
+        # print("Hub Added \n")
         destinationList.append(hub)
         destinationListCopy.append(hub)
 
@@ -285,8 +304,32 @@ def loadPackages(currentHub, truck):
 
 
 # write code that delivers packages, tracks the time, and checks that package deadlines can be met
-
-
+def deliverClosestPackages(currentHub, truck):
+    i = 0
+    found = False
+    while found == False:
+        if i <= len(destinationListCopy):
+            nearest = getNearest(currentHub, i)
+            if truck.destinations.__contains__(nearest[0]):
+                found = True
+                packagesToUnload = packagesByHub(getHubObjByName(nearest[0]))
+                for package in packagesToUnload:
+                    package.status = "Delivered"
+                elapsedTimeMinutes = float(nearest[1]) * (1/truck.speedMPH) * 60
+                newTime = datetime.timedelta(minutes=elapsedTimeMinutes)
+                truck.setNewTime(newTime)
+                truck.currentLocation = nearest[0]
+                truck.milesTracker += float(nearest[1])
+                truck.destinations.remove(nearest[0])
+                print("\n", truck.name, truck.milesTracker, truck.currentLocation, truck.date_time)
+                if truck.destinations != 0:
+                    deliverClosestPackages(nearest[0], truck)
+            else:
+                i += 1
+        else:
+            found = True
+    if truck.name == "Truck 2":
+        truck.destinations.append(mainHub)
 
 
 
@@ -295,40 +338,56 @@ def loadPackages(currentHub, truck):
 # Load packages initially onto 2 trucks based on packages available for delivery
 loadPackages(hubList[0].hubName, truck2)
 loadPackages(hubList[0].hubName, truck1)
+deliverClosestPackages(hubList[0].hubName, truck1)
+deliverClosestPackages(hubList[0].hubName, truck2)
+
+def deliverDelayedPackages(currentHub, truck):
 
 
+
+print(len(truck2.packageList))
 
 "------------------------------TESTING----------------------------------------"
-
 
 t1 = []
 t2 = []
 
 for package in truck2.packageList:
- t2.append(package.packageID)
+    t2.append(package.packageID)
 
 for package in truck1.packageList:
- t1.append(package.packageID)
+    t1.append(package.packageID)
 
-#for destination in truck2.destinations:
-    #t2.append(destination)
+# for destination in truck2.destinations:
+# t2.append(destination)
 
-#for destination in truck1.destinations:
-    #t1.append(destination)
+# for destination in truck1.destinations:
+# t1.append(destination)
+
+arr = [1, 2, 3]
+i = 0
+arr.remove(2)
+print(arr)
 
 """print(sorted(t1))
 print(sorted(t2))
 print(destinationList)"""
 
-time = datetime.time(8, 0)
-timeChange = datetime.timedelta(minutes=30)
-time = time + timeChange
-formattedTime = time.strftime("%I:%M %p")
+"""startDateTime = datetime.datetime(2000, 1, 1, 8, 0)
+startTime = startDateTime.time()
+print(startTime)
+timeChange1 = datetime.timedelta(minutes=32)
+time = startDateTime + timeChange1
+time = time.time()
 print(time)
+formattedTime = time.strftime("%I:%M %p")
+print(formattedTime)
+
+truck2.setNewTime(timeChange1)
+print(truck2.date_time)"""
 
 """for hub in hubList:
     print(hub.hubName, "\n")"""
-
 
 
 
