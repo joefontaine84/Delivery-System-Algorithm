@@ -81,6 +81,7 @@ class StatusType:
     ready = "Ready for Delivery"
     enroute = "En Route"
     delivered = "Delivered"
+    delayed = "Delayed"
 
 class HashTable:
     hashTable = {}  # blank hashtable (dictionary)
@@ -97,10 +98,10 @@ class HashTable:
                                  row[7])  # creates a package object
 
             if row[7].__contains__("Delay"):
-                packageObj.status = "Delayed"
+                packageObj.status = StatusType.delayed
                 delayedPackages.append(packageObj)
             else:
-                packageObj.status = "Ready for delivery"
+                packageObj.status = StatusType.ready
 
             packageObjList.append(packageObj)
             bucket = int(packageObj.packageID) % 10  # determines which bucket to place the object in
@@ -123,6 +124,7 @@ class HashTable:
                 print("Package ID: " + i.packageID + "\n" + "Address: " + i.packageAddress + "\n" +
                       "Deadline: " + i.deadline + "\n" + "City: " + i.city + "\n" + "Zipcode: " + i.zipCode +
                       "\n" + "Weight: " + i.mass + "\n" + "Status: " + i.status)
+                return i
 
 
 hashtable = HashTable()
@@ -201,14 +203,14 @@ def packageAddressToHub(packageAddress):
 def packagesReady(objList):
     temparr = []
     for obj in objList:
-        if obj.status == "Ready for delivery":
+        if obj.status == StatusType.ready:
             temparr.append(obj)
     return temparr
 
 def packagesEnRoute(objList):
     temparr = []
     for obj in objList:
-        if obj.status == "En Route":
+        if obj.status == StatusType.enroute:
             temparr.append(obj)
     return temparr
 
@@ -220,13 +222,12 @@ def getNearest(currentLocation, value):
             selecteditem = items[value]  # returns item set (e.g., ('Cottonwood Regional Softball Complex\n 4300 S 1300 E', '1.9')
             return selecteditem
 
-
 def packagesByHub(hub, statusType):
     tempList = []
     newArr = []
-    if statusType == "Ready for Delivery":
+    if statusType == StatusType.ready:
         tempList = packagesReady(packageObjList)
-    elif statusType == "En Route":
+    elif statusType == StatusType.enroute:
         tempList = packagesEnRoute(packageObjList)
     for package in tempList:
         if hub.hubName.__contains__(package.packageAddress):
@@ -268,7 +269,7 @@ for package in packages:
         packagesToLoad = packagesByHub(getHubObjByName(hubAddress), StatusType.ready)
         for package in packagesToLoad:
             truck2.packageList.append(package)
-            package.status = "En Route"
+            package.status = StatusType.enroute
         destinationList.remove(hubAddress)
 
     if linkedPackageIDs.__contains__(int(package.packageID)):
@@ -277,7 +278,7 @@ for package in packages:
         packagesToLoad = packagesByHub(getHubObjByName(hubAddress), StatusType.ready)
         for package in packagesToLoad:
             truck1.packageList.append(package)
-            package.status = "En Route"
+            package.status = StatusType.enroute
             if linkedPackageIDs.__contains__(int(package.packageID)):
                 linkedPackageIDs.remove(int(package.packageID))
         if destinationList.__contains__(hubAddress):
@@ -291,19 +292,19 @@ def loadPackages(currentHub, truck):
     while found == False:
         if i <= len(destinationListCopy):
             nearest = getNearest(currentHub, i)
-            print("i:", i)
-            print("nearest hub", nearest[0])
             if destinationList.__contains__(nearest[0]) and nearest[0] != mainHub:
                 found = True
                 truck.destinations.append(nearest[0])
                 packagesToLoad = packagesByHub(getHubObjByName(nearest[0]), StatusType.ready)
+                if len(packagesToLoad) + len(truck.packageList) > 16:
+                    break
                 for package in packagesToLoad:
                     truck.packageList.append(package)
-                    package.status = "En Route"
+                    package.status = StatusType.enroute
                 destinationList.remove(nearest[0])
                 print("Call of load packages successful.Truck destinationList:", len(truck.destinations))
                 if (len(truck.destinations) < (len(destinationListCopy) / 2)) and len(destinationList) != 0:
-                    print("length of len(truck.destinations)", len(truck.destinations), "\n")
+                    print(truck.name, "length of len(truck.destinations)", len(truck.destinations), "Truck packageList size: ", len(truck.packageList), "\n")
                     loadPackages(nearest[0], truck)
             else:
                 print("fail. increment i", "\n")
@@ -314,11 +315,13 @@ def loadPackages(currentHub, truck):
 
 
 arrivalTime = datetime.datetime(2000, 1, 1, 9, 5)
-truckDelayedPackages = False
+changeStatus = False
+truck2TravelBack = False
+truck1TravelBack = False
 
 # write code that delivers packages, tracks the time, and checks that package deadlines can be met
 def deliverClosestPackages(currentHub, truck):
-    global truckDelayedPackages
+    global truck2TravelBack, truck1TravelBack, changeStatus
     i = 0
     found = False
     while found == False:
@@ -329,123 +332,122 @@ def deliverClosestPackages(currentHub, truck):
                 found = True
                 packagesToUnload = packagesByHub(getHubObjByName(nearest[0]), StatusType.enroute)
                 for package in packagesToUnload:
-                    package.status = "Delivered"
+                    package.status = StatusType.delivered
                 elapsedTimeMinutes = float(nearest[1]) * (1/truck.speedMPH) * 60
                 newTime = datetime.timedelta(minutes=elapsedTimeMinutes)
                 truck.setNewTime(newTime)
                 truck.currentLocation = nearest[0]
                 truck.milesTracker += float(nearest[1])
                 truck.destinations.remove(nearest[0])
-                print("\n", truck.name, truck.milesTracker, truck.currentLocation, truck.date_time)
+                print("\n", truck.name, truck.milesTracker, truck.currentLocation, truck.date_time, len(packagesToUnload))
 
-                if truck.name == "Truck 2" and truck.date_time > arrivalTime and truckDelayedPackages == False:
-
+                if truck.date_time > arrivalTime and changeStatus == False:
+                    changeStatus = True
                     for package in delayedPackages:
                         package.status = StatusType.ready
-                    truckDelayedPackages = True
+
+                if truck.name == "Truck 2" and truck.date_time > arrivalTime and truck2TravelBack == False:
+                    truck2TravelBack = True
                     hub = getHubObjByName(truck2.currentLocation)
                     distanceToMainHub = float(hub.distToHubs[mainHub])
                     print("travelling to mainHub")
                     truck.milesTracker += distanceToMainHub
                     print("arrived at mainHub")
-                    for package in delayedPackages:
-                        truck.packageList.append(package)
-                        truck.destinations.append(packageAddressToHub(package.packageAddress))
-                        package.status = StatusType.enroute
+                    for package in packageObjList:
+                        if package.status == StatusType.ready and package.deadline != "EOD":
+                            print(package.packageID)
+                            truck.packageList.append(package)
+                            truck.destinations.append(packageAddressToHub(package.packageAddress))
+                            package.status = StatusType.enroute
                     deliverClosestPackages(mainHub, truck)
+
+                if truck.name == "Truck 1" and len(truck.destinations) == 0 and truck1TravelBack == False:
+                    truck1TravelBack = True
+                    hub = getHubObjByName(truck1.currentLocation)
+                    distanceToMainHub = float(hub.distToHubs[mainHub])
+                    print("truck 1 travelling to mainHub")
+                    truck.milesTracker += distanceToMainHub
+                    print("truck 1 arrived at mainHub")
+
+                    for package in packageObjList:
+                        if package.status == StatusType.ready and package.deadline == "EOD":
+                            print(package.packageID)
+                            truck.packageList.append(package)
+                            truck.destinations.append(packageAddressToHub(package.packageAddress))
+                            package.status = StatusType.enroute
+                    deliverClosestPackages(mainHub, truck)
+
                 elif truck.destinations != 0:
                     deliverClosestPackages(nearest[0], truck)
-
-
             else:
                 i += 1
         else:
             found = True
 
+timeOfCorrectedMistake = datetime.datetime(2000, 1, 1, 10, 20)
+def correctPackageMistake(packageID):
+    packageToCorrect = hashtable.hashLookUp(packageID)
+    packageToCorrect.status = StatusType.ready
 
+    currentPackageLoc = packageToCorrect.packageAddress
+    correctedPackageLoc = "410 S State St"
 
+    truck2.date_time = timeOfCorrectedMistake
 
+    currentTruckLoc = truck2.currentLocation
+    hub = getHubObjByName(currentTruckLoc)
 
+    distance = float(hub.distToHubs[packageAddressToHub(currentPackageLoc)])
+    truck1.milesTracker += distance
+    elapsedTimeMin = distance * (1/truck1.speedMPH) * 60
+    newTime = datetime.timedelta(minutes=elapsedTimeMin)
+    truck1.setNewTime(newTime)
+    truck1.packageList.append(packageToCorrect)
+    packageToCorrect.status = StatusType.enroute
+    print("travelled to hub where package was delivered")
+
+    # Code for travelling to corrected location
+    currentTruckLoc = packageAddressToHub(currentPackageLoc)
+    truck1.currentLocation = currentTruckLoc
+    hub = getHubObjByName(currentTruckLoc)
+    distance = float(hub.distToHubs[packageAddressToHub(correctedPackageLoc)])
+    truck1.milesTracker += distance
+    elapsedTimeMin = distance * (1 / truck1.speedMPH) * 60
+    newTime = datetime.timedelta(minutes=elapsedTimeMin)
+    truck1.setNewTime(newTime)
+    packageToCorrect.status = StatusType.delivered
+    print("Delivered to corrected location")
 
 # Load packages initially onto 2 trucks based on packages available for delivery
 loadPackages(hubList[0].hubName, truck2)
+
 loadPackages(hubList[0].hubName, truck1)
+
+
 deliverClosestPackages(hubList[0].hubName, truck1)
 deliverClosestPackages(hubList[0].hubName, truck2)
+correctPackageMistake(9)
 
-print(len(truck2.packageList))
+
+
 
 "------------------------------TESTING----------------------------------------"
 
-t1 = []
-t2 = []
+for package in packageObjList:
+    if package.status == StatusType.ready:
+        print(package.packageID, package.status)
+    else:
+        print(package.packageID, package.status)
 
-for package in truck2.packageList:
-    t2.append(package.packageID)
-
-for package in truck1.packageList:
-    t1.append(package.packageID)
-
+print(truck1.milesTracker)
+print(truck2.milesTracker)
 # for destination in truck2.destinations:
 # t2.append(destination)
 
 # for destination in truck1.destinations:
 # t1.append(destination)
 
-arr = [1, 2, 3]
-i = 0
-arr.remove(2)
-print(arr)
-print(truck1.milesTracker, truck2.milesTracker)
 
-for package in truck1.packageList:
-    print(package.status)
-for package in truck2.packageList:
-    print(package.status)
-print(len(truck2.destinations))
-print(StatusType.ready)
-"""print(sorted(t1))
-print(sorted(t2))
-print(destinationList)"""
-
-"""startDateTime = datetime.datetime(2000, 1, 1, 8, 0)
-startTime = startDateTime.time()
-print(startTime)
-timeChange1 = datetime.timedelta(minutes=32)
-time = startDateTime + timeChange1
-time = time.time()
-print(time)
-formattedTime = time.strftime("%I:%M %p")
-print(formattedTime)
-
-truck2.setNewTime(timeChange1)
-print(truck2.date_time)
-
-
-            
-if truck.name == "Truck 2" and truck.date_time > arrivalTime and truckDelayedPackages == False:
-    truckDelayedPackages = True
-    hub = getHubObjByName(truck2.currentLocation)
-    distanceToMainHub = float(hub.distToHubs[mainHub])
-    print("travelling to mainHub")
-    truck.milesTracker += distanceToMainHub
-    print("arrived at mainHub")
-    for package in delayedPackages:
-        package.status = "En route"
-        truck.packageList.append(package)
-        truck.destinations.append(packageAddressToHub(package.packageAddress))
-    deliverClosestPackages(mainHub, truck)
-
-
-
-
-
-
-
-"""
-
-"""for hub in hubList:
-    print(hub.hubName, "\n")"""
 
 
 
