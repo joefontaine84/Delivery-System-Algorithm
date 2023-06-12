@@ -1,50 +1,8 @@
-# # This is a sample Python script.
-#
-# # Press Shift+F10 to execute it or replace it with your code.
-# # Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
-#
-#
-# def print_hi(name):
-#     # Use a breakpoint in the code line below to debug your script.
-#     print(f'Hi, {name}')  # Press Ctrl+F8 to toggle the breakpoint.
-#
-#
-# # Press the green button in the gutter to run the script.
-# if __name__ == '__main__':
-#     print_hi('PyCharm')
-#
-# # See PyCharm help at https://www.jetbrains.com/help/pycharm/
 
-"""Your task is to determine an algorithm, write code, and present a solution where all 40 packages (listed in the attached “WGUPS Package File”)
-will be delivered on time while meeting each package’s requirements and keeping the combined total distance traveled under 140 miles for both trucks.
-The specific delivery locations are shown on the attached “Salt Lake City Downtown Map,” and distances to each location are given in the attached “WGUPS
-Distance Table.” The intent is to use the program for this specific location and also for many other cities in each state where WGU has a presence.
-As such, you will need to include detailed comments to make your code easy to follow and to justify the decisions you made while writing your scripts.
-Keep in mind that the supervisor should be able to see, at assigned points, the progress of each truck and its packages by any of the variables listed
-in the “WGUPS Package File,” including what has been delivered and at what time the delivery occurred.
-
-Assumptions:
-•   Each truck can carry a maximum of 16 packages, and the ID number of each package is unique.
-
-•   The trucks travel at an average speed of 18 miles per hour and have an infinite amount of gas with no need to stop.
-
-•   There are no collisions.
-
-•   Three trucks and two drivers are available for deliveries. Each driver stays with the same truck as long as that truck is in service.
-
-•   Drivers leave the hub no earlier than 8:00 a.m., with the truck loaded, and can return to the hub for packages if needed.
-
-•   The delivery and loading times are instantaneous, i.e., no time passes while at a delivery or when moving packages to a truck at the hub (that time is factored into the calculation of the average speed of the trucks).
-
-•   There is up to one special note associated with a package.
-
-•   The delivery address for package #9, Third District Juvenile Court, is wrong and will be corrected at 10:20 a.m. WGUPS is aware that the address is incorrect and will be updated at 10:20 a.m. However, WGUPS does not know the correct address (410 S State St., Salt Lake City, UT 84111) until 10:20 a.m.
-
-•   The distances provided in the WGUPS Distance Table are equal regardless of the direction traveled.
-
-•   The day ends when all 40 packages have been delivered."""
 import datetime
+import sys
 
+# the Package class which stores information on each package processed by this program
 class Package:
     def __init__(self, packageID, packageAddress, city, state, zipCode, deadline, mass, specialNotes):
         self.packageID = packageID
@@ -55,9 +13,13 @@ class Package:
         self.deadline = deadline
         self.mass = mass
         self.specialNotes = specialNotes
-        self.status = ""
+        self.status = ""                        # the status variable stores the package's current status (at the hub, en route, delayed, or delivered)
+        self.readyTime = datetime               # the readyTime variable stores the package's time in which the package was first ready for delivery
+        self.enrouteTime = datetime             # the enrouteTime variable stores the package's time in which the package was first en route to a destination
+        self.delayedTime = datetime             # the delayedTime variable stores the package's time in which it was first deemed to be delayed, if at all
+        self.deliveredTime = datetime           # the deliveredTime variable stores the package's time in which it was delivered to its destination
 
-
+# the Truck class which stores information on trucks processed in this program
 class Truck:
     def __init__(self):
         self.packageList = []
@@ -68,21 +30,23 @@ class Truck:
         self.milesTracker = 0
         self.currentLocation = ""
 
+    # this function takes a datetime variable and adds it to the existing truck date_time variable.
     def setNewTime(self, timeChange):
         newDateTime = timeChange + self.date_time
         self.date_time = newDateTime
 
 
-packageObjList = []  # list of all package objects
-delayedPackages = []
-startingPoint = "4001 South 700 East"
+packageObjList = []  # list of all package objects taken from the WGUPS Package File.csv file
+delayedPackages = [] # a list of all delayed packages
 
+# this class is created to quickly and consistently change a package's status when appropriate
 class StatusType:
     ready = "Ready for Delivery"
     enroute = "En Route"
     delivered = "Delivered"
     delayed = "Delayed"
 
+# this class creates a hashtable for all package objects processed by this program for efficient searching abilities
 class HashTable:
     hashTable = {}  # blank hashtable (dictionary)
     for i in range(10):
@@ -93,32 +57,31 @@ class HashTable:
     with open('WGUPS Package File.csv') as csvfile:
         csvreader = csv.reader(csvfile, delimiter=",")
         next(csvreader)  # skips over header row of CSV file
-        for row in csvreader:
-            packageObj = Package(row[0], row[1], row[2], row[3], row[4], row[5], row[6],
-                                 row[7])  # creates a package object
-
+        for row in csvreader:                                                                     # creates a package object based on the provided file. If the file has the term "Delay" in the spcial notes, then the package's status is marked as delayed.
+            packageObj = Package(row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7])
             if row[7].__contains__("Delay"):
                 packageObj.status = StatusType.delayed
+                packageObj.delayedTime = datetime.time(0, 0)                                      # the time in which the package is first known to be delayed is captured. It is assumed to be at 12AM (i.e., the start of the day)
                 delayedPackages.append(packageObj)
             else:
-                packageObj.status = StatusType.ready
+                packageObj.status = StatusType.ready                                              # the default status for the package is 'Ready for Delivery'
+                packageObj.readyTime = datetime.time(0,0)                                         # the time in which the package is first known to be ready is captured. It is assumed to be at 12AM (i.e., the start of the day)
 
-            packageObjList.append(packageObj)
-            bucket = int(packageObj.packageID) % 10  # determines which bucket to place the object in
-            hashTable[bucket].append(packageObj)  # places the packageobj in the corresponding bucket
+            packageObjList.append(packageObj)                                                     # all objects are added to the packageObjList
+            bucket = int(packageObj.packageID) % 10                                               # determines which bucket to place the object in
+            hashTable[bucket].append(packageObj)                                                  # places the packageobj in the corresponding bucket
 
+    # this function adds a packageObj to the hashtable and to the packageObjList
     def hashInsert(self, ID, address, deadline, city, zipcode, weight, status):
-        packageObj = Package(ID, address, city, '', zipcode, deadline, weight,
-                             '')  # the first blank variable is the "state" variable, and the second blank variable is the "special instructions"
+        packageObj = Package(ID, address, city, '', zipcode, deadline, weight, '')  # the first blank variable is the "state" variable, and the second blank variable is the "special instructions"
         packageObj.status = status
         bucket = int(packageObj.packageID) % 10  # determines which bucket to place the object in
         self.hashTable[bucket].append(packageObj)  # places the packageobj in the corresponding bucket
 
+    # this function looks up information of a particular package by a user-provided integer ID
     def hashLookUp(self, ID):
         tempVar = ID % 10
-        print(tempVar)
         tempList = self.hashTable.get(tempVar)
-        print(tempList)
         for i in tempList:
             if int(i.packageID) == ID:
                 print("Package ID: " + i.packageID + "\n" + "Address: " + i.packageAddress + "\n" +
@@ -127,15 +90,15 @@ class HashTable:
                 return i
 
 
-hashtable = HashTable()
-hashtable.hashLookUp(13)
+hashtable = HashTable()     # instantiation of the HashTable class. Once instantiated, package information can become accessible to the user
 
-"""This section of code establishes the array that stores the WGUPS Distance data"""
+# This section of code establishes the array that stores the WGUPS Distance data
 width = 28
 height = 28
-arr = [[0 for i in range(width)] for j in range(height)]
+arr = [[0 for i in range(width)] for j in range(height)]    # creates a 28 x 28 array of blank spaces (zeros act as placeholders)
 
 
+# the Hub class which stores information on hubs processed in this program
 class Hub:
     def __init__(self):
         hubName = ""
@@ -144,35 +107,29 @@ class Hub:
         specificTruck = ""
 
 
-"""This section of code imports the WGUPS Distance Data and stores it into the arr array variable"""
+# This section of code imports the WGUPS Distance Data and stores it into the arr array variable
 import csv
-
 with open('WGUPS Distance Table.csv') as csvfile:
     csvreader = csv.reader(csvfile, delimiter=',')
     count = 0
-    for row in csvreader:  # this for loop populates the data from the csv file into the arr variable
+    for row in csvreader:                   # this for loop populates the data from the csv file into the arr variable
         for i in range(0, len(arr), 1):
             arr[count][i] = row[i]
         count = count + 1
 
-
-# for each hub name , until hub name = hub name, traverse rows... then once the condition is satisfied (i.e., hub name == hub name, traverse column
-
+# this function returns a specific dictionary key based on user provided dictionary and value
 def getKey(value, dictionary):
     keys = dictionary.keys()
     for i in keys:
         if dictionary[i] == value:
             return i
 
-
-"""This section of code populates Hub objects with information such as the hub name and a dictionary of hubs with their distances stored as values"""
+# This section of code populates Hub objects with information such as the hub name and a dictionary of hubs with their distances stored as values
 totalHubs = 27
-hubList = []
-
+hubList = []                                    # a list of all hubs ultimatley read by the WGUPS Distance Table.csv file
 for i in range(1, len(arr), 1):
     hubList.append(Hub())
-    hubList[i - 1].hubName = arr[i][0]  # gets name of hub in first column
-    # destinationDict[hubList[i-1].hubName] = 0
+    hubList[i - 1].hubName = arr[i][0]          # gets name of hub in first column
     tempDict = {}
     for j in range(1, len(arr), 1):
         if i >= j:
@@ -183,9 +140,10 @@ for i in range(1, len(arr), 1):
             tempDict[arr[j][0]] = arr[j][i]
     hubList[i - 1].distToHubs = tempDict
     minimum = min(tempDict.values())
-    del tempDict[getKey(minimum, tempDict)]
+    del tempDict[getKey(minimum, tempDict)]    # deletes the key value pair representing the distance to the same hub (zero miles). This information is not of any use.
 
-
+# provided a given hub name, the hub's corresponding distToHubs variable (a dictionary containing distances to all other hubs; key = hub name, value = distance)
+# is returned in an assorted manner from lowest value (shortest distance) to highest value (longest distance).
 def sortDistToHubs(currentHub):
     tempDict = {}
     for i in range(0, len(hubList), 1):
@@ -193,13 +151,13 @@ def sortDistToHubs(currentHub):
             tempDict = dict(sorted(hubList[i].distToHubs.items(), key=lambda item: float(item[1])))
             return tempDict
 
-
+# provided a given package address variable, the function returns the corresponding hub name that is associated with the package address
 def packageAddressToHub(packageAddress):
     for i in range(0, len(hubList), 1):
         if hubList[i].hubName.__contains__(packageAddress):
             return hubList[i].hubName
 
-
+# provided a variable that represents a list of objects, a list is returned which contains objects that have a status variable with a value that matches "Ready for Delivery"
 def packagesReady(objList):
     temparr = []
     for obj in objList:
@@ -207,6 +165,7 @@ def packagesReady(objList):
             temparr.append(obj)
     return temparr
 
+# provided a variable that represents a list of objects, a list is returned which contains objects that have a status variable with a value that matches "En Route"
 def packagesEnRoute(objList):
     temparr = []
     for obj in objList:
@@ -214,6 +173,9 @@ def packagesEnRoute(objList):
             temparr.append(obj)
     return temparr
 
+# provided an address (current location) and an integer value, a variable is returned with a single key and a single value. The single key-value pair is taken
+# from the sortDistToHubs function, which returns a list of assorted key value pairs organized from lowest value to highest value. The integer value parameter for this
+# function determines which index from the list returned by the sortDistToHubs function to return.
 def getNearest(currentLocation, value):
     for hub in hubList:
         if hub.hubName == currentLocation:
@@ -222,6 +184,8 @@ def getNearest(currentLocation, value):
             selecteditem = items[value]  # returns item set (e.g., ('Cottonwood Regional Softball Complex\n 4300 S 1300 E', '1.9')
             return selecteditem
 
+# provided a hub object and a desired StatusType that is equal to "Ready for Delivery" or "En Route",
+# this function will return a list of package objects in which the package address matches the name of the hub and the status type.
 def packagesByHub(hub, statusType):
     tempList = []
     newArr = []
@@ -234,73 +198,90 @@ def packagesByHub(hub, statusType):
             newArr.append(package)
     return newArr
 
-
+# provided a hub name, this function returns the corresponding hub object that matches the provided name
 def getHubObjByName(hubName):
     for hub in hubList:
         if hub.hubName == hubName:
             return hub
 
-
+# instantiation of truck objects
 truck1 = Truck()
 truck1.name = "Truck 1"
 truck2 = Truck()
 truck2.name = "Truck 2"
-numTrucks = 2
-startingPointCount = 0
-mainHub = hubList[0].hubName
-linkedPackageIDs = [13, 14, 15, 16, 19]
 
-"""Determines closest hub to current location that is provided"""
-start = True
-packages = packagesReady(packageObjList)
-destinationList = []
-destinationListCopy = []  # intended to keep track of initial length of destination list
-for obj in packages:
+mainHub = hubList[0].hubName                                    # a variable that holds the value of the WGU hub name
+
+linkedPackageIDs = [13, 14, 15, 16, 19]                         # the variable that keeps track of all the packages that must be delivered together
+
+
+packages = packagesReady(packageObjList)                        # a list of packages that initially have a status of "Ready for Delivery"
+destinationList = []                                            # a list of all destinations that both trucks shall travel to based on packages that have an initial status of "Ready for Delivery"
+destinationListCopy = []                                        # intended to keep track of initial length of destination list
+for obj in packages:                                            # this for loop adds destinations to the destinationList and destinationListCopy variables based on package adddress, and converting the packages address to a hub address
     hub = packageAddressToHub(obj.packageAddress)
     if not (destinationList.__contains__(hub)):
         destinationList.append(hub)
         destinationListCopy.append(hub)
 
-
-for package in packages:
+for package in packages:                                                                # this for loop adds destinations specifically to the truck 2 destinations variable (a list).
     if package.specialNotes.__contains__("truck 2"):
         hubAddress = packageAddressToHub(package.packageAddress)
         truck2.destinations.append(hubAddress)
         packagesToLoad = packagesByHub(getHubObjByName(hubAddress), StatusType.ready)
-        for package in packagesToLoad:
-            truck2.packageList.append(package)
-            package.status = StatusType.enroute
-        destinationList.remove(hubAddress)
+        for package in packagesToLoad:                                                  # this for loop will add all packages with a status of "Ready for Delivery" if they are associated with
+            truck2.packageList.append(package)                                          # a hub address in which a package is designated to go to and is required to be on truck 2
+            package.status = StatusType.enroute                                         # changes the package status to "En Route"
+            package.enrouteTime = datetime.time(8, 0)                                   # the time of the status change is 8 AM
+        destinationList.remove(hubAddress)                                              # the hub address associated with the package is removed from the destinationList variable
 
-    if linkedPackageIDs.__contains__(int(package.packageID)):
+    if linkedPackageIDs.__contains__(int(package.packageID)):                           # this code block will add any package with a package ID listed in the linkedPackageIDs variable to truck 1's destinations variable
         hubAddress = packageAddressToHub(package.packageAddress)
         truck1.destinations.append(hubAddress)
         packagesToLoad = packagesByHub(getHubObjByName(hubAddress), StatusType.ready)
         for package in packagesToLoad:
             truck1.packageList.append(package)
-            package.status = StatusType.enroute
+            package.status = StatusType.enroute                                         # changes the status of the package to "En Route"
+            package.enrouteTime = datetime.time(8, 0)                                   # the time of the status change is 8 AM
             if linkedPackageIDs.__contains__(int(package.packageID)):
-                linkedPackageIDs.remove(int(package.packageID))
+                linkedPackageIDs.remove(int(package.packageID))                         # the package ID is removed from the linkedPackageIDs list
         if destinationList.__contains__(hubAddress):
-            destinationList.remove(hubAddress)
+            destinationList.remove(hubAddress)                                          # the hub address associated with the package is removed from the destinationList
+
+"""Truck 1 List prior to loadPackages function call:
+Truck 1 13
+Truck 1 39
+Truck 1 14
+Truck 1 15
+Truck 1 16
+Truck 1 34
+Truck 1 19"""
+
+"""Truck 2 List prior to loadPackages function call:
+Truck 2 3
+Truck 2 18
+Truck 2 36
+Truck 2 5
+Truck 2 37
+Truck 2 38"""
 
 
 def loadPackages(currentHub, truck):
     i = 0
     found = False
-    # compare currentAddress to address in destinationDict
     while found == False:
-        if i <= len(destinationListCopy):
-            nearest = getNearest(currentHub, i)
+        if i <= len(destinationListCopy):                                                       # this checks to see if the i integer value is <= the total length of the destinationListCopy variable
+            nearest = getNearest(currentHub, i)                                                 # this
             if destinationList.__contains__(nearest[0]) and nearest[0] != mainHub:
                 found = True
-                truck.destinations.append(nearest[0])
                 packagesToLoad = packagesByHub(getHubObjByName(nearest[0]), StatusType.ready)
                 if len(packagesToLoad) + len(truck.packageList) > 16:
                     break
+                truck.destinations.append(nearest[0])
                 for package in packagesToLoad:
                     truck.packageList.append(package)
                     package.status = StatusType.enroute
+                    package.enrouteTime = datetime.time(8, 0)
                 destinationList.remove(nearest[0])
                 print("Call of load packages successful.Truck destinationList:", len(truck.destinations))
                 if (len(truck.destinations) < (len(destinationListCopy) / 2)) and len(destinationList) != 0:
@@ -319,6 +300,10 @@ changeStatus = False
 truck2TravelBack = False
 truck1TravelBack = False
 
+
+
+
+
 # write code that delivers packages, tracks the time, and checks that package deadlines can be met
 def deliverClosestPackages(currentHub, truck):
     global truck2TravelBack, truck1TravelBack, changeStatus
@@ -327,17 +312,19 @@ def deliverClosestPackages(currentHub, truck):
     while found == False:
         if i <= len(destinationListCopy):
             nearest = getNearest(currentHub, i)
-
             if truck.destinations.__contains__(nearest[0]):
                 found = True
-                packagesToUnload = packagesByHub(getHubObjByName(nearest[0]), StatusType.enroute)
-                for package in packagesToUnload:
-                    package.status = StatusType.delivered
-                elapsedTimeMinutes = float(nearest[1]) * (1/truck.speedMPH) * 60
+                elapsedTimeMinutes = float(nearest[1]) * (1 / truck.speedMPH) * 60
                 newTime = datetime.timedelta(minutes=elapsedTimeMinutes)
                 truck.setNewTime(newTime)
                 truck.currentLocation = nearest[0]
                 truck.milesTracker += float(nearest[1])
+                packagesToUnload = packagesByHub(getHubObjByName(nearest[0]), StatusType.enroute)
+                for package in packagesToUnload:
+                    if truck.packageList.__contains__(package):
+                        package.status = StatusType.delivered
+                        package.deliveredTime = truck.date_time.time()
+                        print("unloaded package: ", package.packageID)
                 truck.destinations.remove(nearest[0])
                 print("\n", truck.name, truck.milesTracker, truck.currentLocation, truck.date_time, len(packagesToUnload))
 
@@ -345,6 +332,7 @@ def deliverClosestPackages(currentHub, truck):
                     changeStatus = True
                     for package in delayedPackages:
                         package.status = StatusType.ready
+                        package.readyTime = arrivalTime.time()
 
                 if truck.name == "Truck 2" and truck.date_time > arrivalTime and truck2TravelBack == False:
                     truck2TravelBack = True
@@ -352,13 +340,18 @@ def deliverClosestPackages(currentHub, truck):
                     distanceToMainHub = float(hub.distToHubs[mainHub])
                     print("travelling to mainHub")
                     truck.milesTracker += distanceToMainHub
+                    elapsedTimeMinutes = distanceToMainHub * (1/truck.speedMPH) * 60
+                    newTime = datetime.timedelta(minutes=elapsedTimeMinutes)
+                    truck.setNewTime(newTime)
                     print("arrived at mainHub")
                     for package in packageObjList:
                         if package.status == StatusType.ready and package.deadline != "EOD":
                             print(package.packageID)
                             truck.packageList.append(package)
-                            truck.destinations.append(packageAddressToHub(package.packageAddress))
+                            if not(truck.destinations.__contains__(packageAddressToHub(package.packageAddress))):
+                                truck.destinations.append(packageAddressToHub(package.packageAddress))
                             package.status = StatusType.enroute
+                            package.enrouteTime = truck.date_time.time()
                     deliverClosestPackages(mainHub, truck)
 
                 if truck.name == "Truck 1" and len(truck.destinations) == 0 and truck1TravelBack == False:
@@ -367,14 +360,18 @@ def deliverClosestPackages(currentHub, truck):
                     distanceToMainHub = float(hub.distToHubs[mainHub])
                     print("truck 1 travelling to mainHub")
                     truck.milesTracker += distanceToMainHub
+                    elapsedTimeMinutes = distanceToMainHub * (1/truck.speedMPH) * 60
+                    newTime = datetime.timedelta(minutes=elapsedTimeMinutes)
+                    truck.setNewTime(newTime)
                     print("truck 1 arrived at mainHub")
-
                     for package in packageObjList:
                         if package.status == StatusType.ready and package.deadline == "EOD":
                             print(package.packageID)
                             truck.packageList.append(package)
-                            truck.destinations.append(packageAddressToHub(package.packageAddress))
+                            if not (truck.destinations.__contains__(packageAddressToHub(package.packageAddress))):
+                                truck.destinations.append(packageAddressToHub(package.packageAddress))
                             package.status = StatusType.enroute
+                            package.enrouteTime = truck.date_time.time()
                     deliverClosestPackages(mainHub, truck)
 
                 elif truck.destinations != 0:
@@ -420,27 +417,31 @@ def correctPackageMistake(packageID):
 
 # Load packages initially onto 2 trucks based on packages available for delivery
 loadPackages(hubList[0].hubName, truck2)
-
 loadPackages(hubList[0].hubName, truck1)
+for package in truck1.packageList:
+    print(truck1.name, package.packageID)
+
+for package in truck2.packageList:
+    print(truck2.name, package.packageID)
 
 
 deliverClosestPackages(hubList[0].hubName, truck1)
 deliverClosestPackages(hubList[0].hubName, truck2)
-correctPackageMistake(9)
+#correctPackageMistake(9)
 
 
 
 
 "------------------------------TESTING----------------------------------------"
 
-for package in packageObjList:
-    if package.status == StatusType.ready:
-        print(package.packageID, package.status)
-    else:
-        print(package.packageID, package.status)
 
-print(truck1.milesTracker)
-print(truck2.milesTracker)
+
+print("Welcome to the program")
+
+if sys.argv[1] == "Get":
+    print("test successful")
+else:
+    print("test failed")
 # for destination in truck2.destinations:
 # t2.append(destination)
 
@@ -448,8 +449,45 @@ print(truck2.milesTracker)
 # t1.append(destination)
 
 
+"""
+
+Please enter from the following options:
+
+Input: 1
+Output: An option for the user to enter the package ID (1-40) and a specific time. The output will tell them the status of the package at the desired time
+
+Input: 2
+Output: Snapshots of all packages at X time (see requirements)
+
+Input: 3
+Output: Snapshots of all packages at Y time (see requirements)
+
+Input: 4
+Output: Snapshots of all packages at Z time (see requirements)
 
 
+
+Pseudocode:
+
+when package objects are created: package.readyTime = datetime.time(0, 0)
+
+when package objects are loaded onto trucks: package.associatedTruck = truck.name
+                                             package.enrouteTime = date.time(truck.date_time.time())
+
+when package objects are unloaded:          package.delivered = date.time(truck.date_time.time())
+
+Input 1:
+
+packageInQuestions = hashTable.hashsearch(providedID)
+providedTimeByUser = X
+
+if providedTimeByUser >= packageInQuestions.readyTime and less than packageInQuestions.enroutetime
+    ready
+    
+... repeat similar if statements for other options
+
+
+"""
 
 
 
