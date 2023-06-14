@@ -281,7 +281,7 @@ Truck 2 18
 Truck 2 36
 Truck 2 5
 Truck 2 37
-Truck 2 38"""
+Truck 2 38 """
 
 """destinationListCopy length: 24"""
 print("destinationListCopy length: ", len(destinationListCopy))
