@@ -90,9 +90,9 @@ class HashTable:
         tempList = self.hashTable.get(tempVar)
         for i in tempList:
             if int(i.packageID) == ID:
-                print("Package ID: " + i.packageID + "\n" + "Address: " + i.packageAddress + "\n" +
-                      "Deadline: " + i.deadline + "\n" + "City: " + i.city + "\n" + "Zipcode: " + i.zipCode +
-                      "\n" + "Weight: " + i.mass + "\n" + "Status: " + i.status)
+                #print("Package ID: " + i.packageID + "\n" + "Address: " + i.packageAddress + "\n" +
+                      #"Deadline: " + i.deadline + "\n" + "City: " + i.city + "\n" + "Zipcode: " + i.zipCode +
+                     # "\n" + "Weight: " + i.mass + "\n" + "Status: " + i.status)
                 return i
 
 
@@ -407,28 +407,30 @@ def deliverClosestPackages(currentHub, truck):
 
 timeOfCorrectedMistake = datetime.datetime(2000, 1, 1, 10, 20)
 
+# this function delivers a package to the correct facility after that package has already been delivered to the incorrect location.
+# the function takes an integer packageID variable and a string correctedPackageLoc variable - the string variable represents the name of the hub in which the package should be delivered to.
 def correctPackageMistake(packageID, correctedPackageLoc):
-    packageToCorrect = hashtable.hashLookUp(packageID)
-    packageToCorrect.status = StatusType.ready
+    packageToCorrect = hashtable.hashLookUp(packageID)  # uses the hashtable to retrieve the package
 
-    currentPackageLoc = packageToCorrect.packageAddress
+    currentPackageLoc = packageToCorrect.packageAddress # current location of the package
 
-    currentTruckLoc = truck2.currentLocation
-    hub = getHubObjByName(currentTruckLoc)
+    currentTruckLoc = truck2.currentLocation            # current location of truck 2, in which truck 2 will be fixed to address this issue
+    hub = getHubObjByName(currentTruckLoc)              # the hub object in which truck 2 is located at
 
-    distance = float(hub.distToHubs[packageAddressToHub(currentPackageLoc)])
-    truck2.milesTracker += distance
+    distance = float(hub.distToHubs[packageAddressToHub(currentPackageLoc)])    # this code block determines the distance travelled by truck 2 to go retrieve the package
+    truck2.milesTracker += distance                                             # and also determines how much time has elapsed in doing so.
     elapsedTimeMin = distance * (1 / truck1.speedMPH) * 60
     newTime = datetime.timedelta(minutes=elapsedTimeMin)
     truck2.setNewTime(newTime)
-    truck2.packageList.append(packageToCorrect)
+
+    truck2.packageList.append(packageToCorrect)                                     # this code block updates various information pertaining to truck 2 based on its travel to the current package location
     truck2.destinations.append(packageAddressToHub(correctedPackageLoc))
     truck2.currentLocation = packageAddressToHub(currentPackageLoc)
     print("length of destinations", len(truck2.destinations), "miles: ", distance)
-    packageToCorrect.status = StatusType.enroute
+    packageToCorrect.status = StatusType.enroute                                    # package status changed to "En Route"
     print("travelled to hub where package was delivered")
 
-    deliverClosestPackages(truck2.currentLocation, truck2)
+    deliverClosestPackages(truck2.currentLocation, truck2)                          # call to the deliverClosestPackages function to deliver the last package.
 
     """# Code for travelling to corrected location
     currentTruckLoc = packageAddressToHub(currentPackageLoc)
@@ -444,23 +446,60 @@ def correctPackageMistake(packageID, correctedPackageLoc):
 
 
 # Load packages initially onto 2 trucks based on packages available for delivery
-loadPackages(hubList[0].hubName, truck2)
-loadPackages(hubList[0].hubName, truck1)
-for package in truck1.packageList:
-    print(truck1.name, package.packageID)
+loadPackages(hubList[0].hubName, truck2)            # load packages onto truck 2
+loadPackages(hubList[0].hubName, truck1)            # load packages onto truck 1
+deliverClosestPackages(hubList[0].hubName, truck1)  # deliver packages for truck 1
+deliverClosestPackages(hubList[0].hubName, truck2)  # deliver packages for truck 2
+correctPackageMistake(9, "410 S State St")          # correct delivery mistake for package 9
 
-for package in truck2.packageList:
-    print(truck2.name, package.packageID)
+def printPackageInfo(time, list):
+    for package in list:
+        if package.readyTime <= time < package.enrouteTime:
+            print("Package ID: " + package.packageID + "\nPackage Status at " + str(time) + ": " + StatusType.ready)
+        elif package.enrouteTime <= time < package.deliveredTime:
+            print("Package ID: " + package.packageID + "\nPackage Status at " + str(time) + ": " + StatusType.enroute)
+        else:
+            print("Package ID: " + package.packageID + "\nPackage Status at " + str(time) + ": " + StatusType.delivered)
+def getUserInput():
+    input1 = input("Welcome to the program. Please enter from the following options:\n" +
+          "1: The user will be prompted to enter a specific packageID (an integer between 1-40, inclusive) and a specific time (24 hour clock time). The output will tell them the status of the package at the desired time\n" +
+          "2: The output will show the user a snapshot of all packages at 9:30:00 AM\n" +
+          "3: The output will show the user a snapshot of all packages at 10:30:00 AM\n" +
+          "4: The output will show the user a snapshot of all packages at 11:30:00 AM\n" +
+          "5: Exit the application\n")
+    if int(input1) == 1:
+        userInput = input("Please enter an integer number between 1-40, inclusive: ")
+        userInput = int(userInput)
+        package = hashtable.hashLookUp(userInput)
+        listVar = [package]
+        temp_userInput_time = input("Please entered a desired time (24 hour clock time): ")
+        userInput_time = datetime.datetime.strptime(temp_userInput_time, "%H:%M").time()
+        printPackageInfo(userInput_time, listVar)
+    elif int(input1) == 2:
+        time = datetime.time(9, 30, 0)
+        listVar = packageObjList
+        printPackageInfo(time, listVar)
+    elif int(input1) == 3:
+        time = datetime.time(10, 30, 0)
+        listVar = packageObjList
+        printPackageInfo(time, listVar)
+    elif int(input1) == 4:
+        time = datetime.time(9, 30, 0)
+        listVar = packageObjList
+        printPackageInfo(time, listVar)
+    elif int(input1) == 5:
+        sys.exit()
+    getUserInput()
 
-deliverClosestPackages(hubList[0].hubName, truck1)
-deliverClosestPackages(hubList[0].hubName, truck2)
-correctPackageMistake(9, "410 S State St")
 
+getUserInput()
 
 
 "------------------------------TESTING----------------------------------------"
 
-print("Welcome to the program")
+
+
+
 
 #if sys.argv[1] == "Get":
     #print("test successful")
@@ -471,6 +510,13 @@ print("Welcome to the program")
 # for destination in truck1.destinations:
 # t1.append(destination)
 print(truck1.milesTracker + truck2.milesTracker)
+
+datetime1 = datetime.datetime(2000, 1, 1, 8, 0)
+time = datetime1.time()
+inputtime = datetime.time(9, 0)
+
+if time < inputtime:
+    print("true")
 
 """
 
