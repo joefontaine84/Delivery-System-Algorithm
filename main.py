@@ -43,7 +43,7 @@ delayedPackages = []  # a list of all delayed packages
 
 # this class is created to quickly and consistently change a package's status when appropriate
 class StatusType:
-    ready = "Ready for Delivery"
+    ready = "At the Hub"
     enroute = "En Route"
     delivered = "Delivered"
     delayed = "Delayed"
@@ -51,10 +51,7 @@ class StatusType:
 
 # this class creates a hashtable for all package objects processed by this program for efficient searching abilities
 class HashTable:
-    hashTable = {}  # blank hashtable (dictionary)
-    for i in range(10):
-        hashTable.__setitem__(i, [])
-
+    hashTable = [[] for i in range(10)]    # custom hash table without using a dictionary (instead the hash table is a list of lists)
     # imports the WGUPS Package File
     import csv
     with open('WGUPS Package File.csv') as csvfile:
@@ -64,13 +61,11 @@ class HashTable:
             packageObj = Package(row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7])
             if row[7].__contains__("Delay"):
                 packageObj.status = StatusType.delayed
-                packageObj.delayedTime = datetime.time(0,
-                                                       0)  # the time in which the package is first known to be delayed is captured. It is assumed to be at 12AM (i.e., the start of the day)
+                packageObj.delayedTime = datetime.time(0, 0)  # the time in which the package is first known to be delayed is captured. It is assumed to be at 12AM (i.e., the start of the day)
                 delayedPackages.append(packageObj)
             else:
-                packageObj.status = StatusType.ready  # the default status for the package is 'Ready for Delivery'
-                packageObj.readyTime = datetime.time(0,
-                                                     0)  # the time in which the package is first known to be ready is captured. It is assumed to be at 12AM (i.e., the start of the day)
+                packageObj.status = StatusType.ready  # the default status for the package is 'at the hub'
+                packageObj.readyTime = datetime.time(0, 0)  # the time in which the package is first known to be ready is captured. It is assumed to be at 12AM (i.e., the start of the day)
 
             packageObjList.append(packageObj)  # all objects are added to the packageObjList
             bucket = int(packageObj.packageID) % 10  # determines which bucket to place the object in
@@ -78,8 +73,7 @@ class HashTable:
 
     # this function adds a packageObj to the hashtable and to the packageObjList
     def hashInsert(self, ID, address, deadline, city, zipcode, weight, status):
-        packageObj = Package(ID, address, city, '', zipcode, deadline, weight,
-                             '')  # the first blank variable is the "state" variable, and the second blank variable is the "special instructions"
+        packageObj = Package(ID, address, city, '', zipcode, deadline, weight, '')  # the first blank variable is the "state" variable, and the second blank variable is the "special instructions"
         packageObj.status = status
         bucket = int(packageObj.packageID) % 10  # determines which bucket to place the object in
         self.hashTable[bucket].append(packageObj)  # places the packageobj in the corresponding bucket
@@ -87,12 +81,9 @@ class HashTable:
     # this function looks up information of a particular package by a user-provided integer ID
     def hashLookUp(self, ID):
         tempVar = ID % 10
-        tempList = self.hashTable.get(tempVar)
+        tempList = self.hashTable.__getitem__(tempVar)
         for i in tempList:
             if int(i.packageID) == ID:
-                #print("Package ID: " + i.packageID + "\n" + "Address: " + i.packageAddress + "\n" +
-                      #"Deadline: " + i.deadline + "\n" + "City: " + i.city + "\n" + "Zipcode: " + i.zipCode +
-                     # "\n" + "Weight: " + i.mass + "\n" + "Status: " + i.status)
                 return i
 
 
@@ -101,8 +92,7 @@ hashtable = HashTable()  # instantiation of the HashTable class. Once instantiat
 # This section of code establishes the array that stores the WGUPS Distance data
 width = 28
 height = 28
-arr = [[0 for i in range(width)] for j in
-       range(height)]  # creates a 28 x 28 array of blank spaces (zeros act as placeholders)
+arr = [[0 for i in range(width)] for j in range(height)]  # creates a 28 x 28 array of blank spaces (zeros act as placeholders)
 
 
 # the Hub class which stores information on hubs processed in this program
@@ -171,7 +161,7 @@ def packageAddressToHub(packageAddress):
             return hubList[i].hubName
 
 
-# provided a variable that represents a list of objects, a list is returned which contains objects that have a status variable with a value that matches "Ready for Delivery"
+# provided a variable that represents a list of objects, a list is returned which contains objects that have a status variable with a value that matches "at the hub"
 def packagesReady(objList):
     temparr = []
     for obj in objList:
@@ -201,7 +191,7 @@ def getNearest(currentLocation, value):
             return selecteditem
 
 
-# provided a hub object and a desired StatusType that is equal to "Ready for Delivery" or "En Route",
+# provided a hub object and a desired StatusType that is equal to "at the hub" or "En Route",
 # this function will return a list of package objects in which the package address matches the name of the hub and the status type.
 def packagesByHub(hub, statusType):
     tempList = []
@@ -233,8 +223,8 @@ mainHub = hubList[0].hubName  # a variable that holds the value of the WGU hub n
 
 linkedPackageIDs = [1, 13, 14, 15, 16, 19, 29, 30]  # the variable that keeps track of all the packages that must be delivered together
 
-packages = packagesReady(packageObjList)  # a list of packages that initially have a status of "Ready for Delivery"
-destinationList = []  # a list of all destinations that both trucks shall travel to based on packages that have an initial status of "Ready for Delivery"
+packages = packagesReady(packageObjList)  # a list of packages that initially have a status of "at the hub"
+destinationList = []  # a list of all destinations that both trucks shall travel to based on packages that have an initial status of "at the hub"
 destinationListCopy = []  # intended to keep track of initial length of destination list
 for obj in packages:  # this for loop adds destinations to the destinationList and destinationListCopy variables based on package adddress, and converting the packages address to a hub address
     hub = packageAddressToHub(obj.packageAddress)
@@ -247,7 +237,7 @@ for package in packages:  # this for loop adds destinations specifically to the 
         hubAddress = packageAddressToHub(package.packageAddress)
         truck2.destinations.append(hubAddress)
         packagesToLoad = packagesByHub(getHubObjByName(hubAddress), StatusType.ready)
-        for package in packagesToLoad:  # this for loop will add all packages with a status of "Ready for Delivery" if they are associated with
+        for package in packagesToLoad:  # this for loop will add all packages with a status of "at the hub" if they are associated with
             truck2.packageList.append(package)  # a hub address in which a package is designated to go to and is required to be on truck 2
             package.status = StatusType.enroute  # changes the package status to "En Route"
             package.enrouteTime = datetime.time(8, 0)  # the time of the status change is 8 AM
@@ -265,28 +255,6 @@ for package in packages:  # this for loop adds destinations specifically to the 
                 linkedPackageIDs.remove(int(package.packageID))  # the package ID is removed from the linkedPackageIDs list
         if destinationList.__contains__(hubAddress):
             destinationList.remove(hubAddress)  # the hub address associated with the package is removed from the destinationList
-
-"""Truck 1 List prior to loadPackages function call:
-Truck 1 13
-Truck 1 39
-Truck 1 14
-Truck 1 15
-Truck 1 16
-Truck 1 34
-Truck 1 19"""
-
-"""Truck 2 List prior to loadPackages function call:
-Truck 2 3
-Truck 2 18
-Truck 2 36
-Truck 2 5
-Truck 2 37
-Truck 2 38 """
-
-"""destinationListCopy length: 24"""
-print("destinationListCopy length: ", len(destinationListCopy))
-print("destinationList length: ", len(destinationList))
-
 
 def loadPackages(currentHub, truck):
     i = 0
@@ -459,13 +427,13 @@ def printPackageInfo(time, list):
         elif package.enrouteTime <= time < package.deliveredTime:
             print("Package ID: " + package.packageID + "\nPackage Status at " + str(time) + ": " + StatusType.enroute)
         else:
-            print("Package ID: " + package.packageID + "\nPackage Status at " + str(time) + ": " + StatusType.delivered)
+            print("Package ID: " + package.packageID + "\nPackage Status at " + str(time) + ": " + StatusType.delivered + "; Delivered at: " + str(package.deliveredTime))
 def getUserInput():
     input1 = input("Welcome to the program. Please enter from the following options:\n" +
           "1: The user will be prompted to enter a specific packageID (an integer between 1-40, inclusive) and a specific time (24 hour clock time). The output will tell them the status of the package at the desired time\n" +
-          "2: The output will show the user a snapshot of all packages at 9:30:00 AM\n" +
-          "3: The output will show the user a snapshot of all packages at 10:30:00 AM\n" +
-          "4: The output will show the user a snapshot of all packages at 11:30:00 AM\n" +
+          "2: The output will show the user a snapshot of all packages at 9:20:00 AM\n" +
+          "3: The output will show the user a snapshot of all packages at 10:20:00 AM\n" +
+          "4: The output will show the user a snapshot of all packages at 12:30:00 AM\n" +
           "5: Exit the application\n")
     if int(input1) == 1:
         userInput = input("Please enter an integer number between 1-40, inclusive: ")
@@ -476,15 +444,15 @@ def getUserInput():
         userInput_time = datetime.datetime.strptime(temp_userInput_time, "%H:%M").time()
         printPackageInfo(userInput_time, listVar)
     elif int(input1) == 2:
-        time = datetime.time(9, 30, 0)
+        time = datetime.time(9, 20, 0)
         listVar = packageObjList
         printPackageInfo(time, listVar)
     elif int(input1) == 3:
-        time = datetime.time(10, 30, 0)
+        time = datetime.time(10, 20, 0)
         listVar = packageObjList
         printPackageInfo(time, listVar)
     elif int(input1) == 4:
-        time = datetime.time(9, 30, 0)
+        time = datetime.time(12, 30, 0)
         listVar = packageObjList
         printPackageInfo(time, listVar)
     elif int(input1) == 5:
