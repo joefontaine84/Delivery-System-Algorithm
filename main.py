@@ -36,9 +36,13 @@ class Truck:
         newDateTime = timeChange + self.date_time
         self.date_time = newDateTime
 
-
-packageObjList = []  # list of all package objects taken from the WGUPS Package File.csv file
-delayedPackages = []  # a list of all delayed packages
+# the Hub class which stores information on hubs processed in this program
+class Hub:
+    def __init__(self):
+        hubName = ""
+        hubAddress = ""
+        distToHubs = {}
+        specificTruck = ""
 
 
 # this class is created to quickly and consistently change a package's status when appropriate
@@ -48,6 +52,8 @@ class StatusType:
     delivered = "Delivered"
     delayed = "Delayed"
 
+packageObjList = []  # list of all package objects taken from the WGUPS Package File.csv file
+delayedPackages = []  # a list of all delayed packages
 
 # this class creates a hashtable for all package objects processed by this program for efficient searching abilities
 class HashTable:
@@ -71,7 +77,7 @@ class HashTable:
             bucket = int(packageObj.packageID) % 10  # determines which bucket to place the object in
             hashTable[bucket].append(packageObj)  # places the packageobj in the corresponding bucket
 
-    # this function adds a packageObj to the hashtable and to the packageObjList
+    # this function adds a packageObj to the hashtable
     def hashInsert(self, ID, address, deadline, city, zipcode, weight, status):
         packageObj = Package(ID, address, city, '', zipcode, deadline, weight, '')  # the first blank variable is the "state" variable, and the second blank variable is the "special instructions"
         packageObj.status = status
@@ -94,16 +100,6 @@ width = 28
 height = 28
 arr = [[0 for i in range(width)] for j in range(height)]  # creates a 28 x 28 array of blank spaces (zeros act as placeholders)
 
-
-# the Hub class which stores information on hubs processed in this program
-class Hub:
-    def __init__(self):
-        hubName = ""
-        hubAddress = ""
-        distToHubs = {}
-        specificTruck = ""
-
-
 # This section of code imports the WGUPS Distance Data and stores it into the arr array variable
 import csv
 
@@ -115,7 +111,6 @@ with open('WGUPS Distance Table.csv') as csvfile:
             arr[count][i] = row[i]
         count = count + 1
 
-
 # this function returns a specific dictionary key based on user provided dictionary and value
 def getKey(value, dictionary):
     keys = dictionary.keys()
@@ -123,9 +118,7 @@ def getKey(value, dictionary):
         if dictionary[i] == value:
             return i
 
-
 # This section of code populates Hub objects with information such as the hub name and a dictionary of hubs with their distances stored as values
-totalHubs = 27
 hubList = []  # a list of all hubs ultimatley read by the WGUPS Distance Table.csv file
 for i in range(1, len(arr), 1):
     hubList.append(Hub())
@@ -140,8 +133,7 @@ for i in range(1, len(arr), 1):
             tempDict[arr[j][0]] = arr[j][i]
     hubList[i - 1].distToHubs = tempDict
     minimum = min(tempDict.values())
-    del tempDict[getKey(minimum,
-                        tempDict)]  # deletes the key value pair representing the distance to the same hub (zero miles). This information is not of any use.
+    del tempDict[getKey(minimum, tempDict)]  # deletes the key value pair representing the distance to the same hub (zero miles). This information is not of any use.
 
 
 # provided a given hub name, the hub's corresponding distToHubs variable (a dictionary containing distances to all other hubs; key = hub name, value = distance)
