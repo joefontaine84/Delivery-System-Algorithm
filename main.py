@@ -1,3 +1,6 @@
+# Joe Fontaine, Student ID: 010600667
+
+
 import datetime
 import sys
 
@@ -54,6 +57,7 @@ class StatusType:
 
 packageObjList = []  # list of all package objects taken from the WGUPS Package File.csv file
 delayedPackages = []  # a list of all delayed packages
+hubList = []  # a list of all hubs ultimately read by the WGUPS Distance Table.csv file
 
 # this class creates a hashtable for all package objects processed by this program for efficient searching abilities
 class HashTable:
@@ -119,7 +123,6 @@ def getKey(value, dictionary):
             return i
 
 # This section of code populates Hub objects with information such as the hub name and a dictionary of hubs with their distances stored as values
-hubList = []  # a list of all hubs ultimatley read by the WGUPS Distance Table.csv file
 for i in range(1, len(arr), 1):
     hubList.append(Hub())
     hubList[i - 1].hubName = arr[i][0]  # gets name of hub in first column
@@ -217,14 +220,13 @@ linkedPackageIDs = [1, 13, 14, 15, 16, 19, 29, 30]  # the variable that keeps tr
 
 packages = packagesReady(packageObjList)  # a list of packages that initially have a status of "at the hub"
 destinationList = []  # a list of all destinations that both trucks shall travel to based on packages that have an initial status of "at the hub"
-destinationListCopy = []  # intended to keep track of initial length of destination list
-for obj in packages:  # this for loop adds destinations to the destinationList and destinationListCopy variables based on package adddress, and converting the packages address to a hub address
+
+for obj in packages:  # this for loop adds destinations to the destinationList variable based on package adddress, and converting the package's address to a hub address
     hub = packageAddressToHub(obj.packageAddress)
     if not (destinationList.__contains__(hub)):
         destinationList.append(hub)
-        destinationListCopy.append(hub)
 
-for package in packages:  # this for loop adds destinations specifically to the truck 2 destinations variable (a list).
+for package in packages:  # this for loop adds destinations specifically for truck 1 and truck 2. This is based on the provided requirements and/or the manual addition of certain packages to be assigned to a particular truck object (applicable for truck 1).
     if package.specialNotes.__contains__("truck 2"):
         hubAddress = packageAddressToHub(package.packageAddress)
         truck2.destinations.append(hubAddress)
@@ -252,14 +254,12 @@ def loadPackages(currentHub, truck):
     i = 0
     found = False
     while found == False:
-        if i <= len(hubList)-1:  # this checks to see if the i integer value is <= the total length of the destinationListCopy variable
+        if i <= len(hubList)-1:    # this checks to see if the i integer value is <= the total length of the hubList-1 (the minus 1 accounts for the fact that each hub has only 26 entries in its distToHubs dictionary attribute, while the total hubList has 27.
             nearest = getNearest(currentHub, i)  # this returns the nearest hub relative to the hub parameter entered (nearest[0]) and the distance from the currentHub variable (nearest[1])
             if destinationList.__contains__(nearest[0]) and nearest[0] != mainHub:
                 found = True
-                packagesToLoad = packagesByHub(getHubObjByName(nearest[0]),
-                                               StatusType.ready)  # the packagesToLoad parameter stores the packages that are going to be delivered to the hub stored within the "nearest" variable
-                if len(packagesToLoad) + len(
-                        truck.packageList) > 16:  # trucks can't store more than 16 packages at a time. Nothing is done with the "packagesToLoad variable" if this logic test is true.
+                packagesToLoad = packagesByHub(getHubObjByName(nearest[0]), StatusType.ready)  # the packagesToLoad parameter stores the packages that are going to be delivered to the hub stored within the "nearest" variable
+                if len(packagesToLoad) + len(truck.packageList) > 16:  # trucks can't store more than 16 packages at a time. Nothing is done with the "packagesToLoad variable" if this logic test is true.
                     found = True
                 else:
                     truck.destinations.append(nearest[0])  # if the above logic test is false... the destination of the nearest hub is added to the truck's destinations variable
@@ -268,10 +268,7 @@ def loadPackages(currentHub, truck):
                         package.status = StatusType.enroute  # the time that the package status is changed to "En Route" (8AM) is captured
                         package.enrouteTime = datetime.time(8, 0)
                     destinationList.remove(nearest[0])  # the hub name is removed from the destinationList variable
-                    print(truck.name, "length of len(truck.destinations)", len(truck.destinations),
-                          "Truck packageList size: ", len(truck.packageList), "\n")
-                    loadPackages(nearest[0],
-                                 truck)  # the function is recursively called for the hub name represented as nearest[0]
+                    loadPackages(nearest[0], truck)  # the function is recursively called for the hub name represented as nearest[0]
             else:  # if the hub name represented by the nearest[0] value is not within the destinationList, the next closest hub & distance is obtained in the call to getNearest()
                 i += 1
         else:
@@ -294,7 +291,6 @@ def deliverClosestPackages(currentHub, truck):
             nearest = getNearest(currentHub, i)                                             # gets the nearest hub based on currentHub parameter
             if truck.destinations.__contains__(nearest[0]):                                 # if the nearest hub is within the truck.destination's variable...
                 found = True
-
                 elapsedTimeMinutes = float(nearest[1]) * (1 / truck.speedMPH) * 60          # this code block establishes the new time for the truck since it has left the main WGU hub
                 newTime = datetime.timedelta(minutes=elapsedTimeMinutes)
                 truck.setNewTime(newTime)
@@ -307,9 +303,7 @@ def deliverClosestPackages(currentHub, truck):
                     if truck.packageList.__contains__(package):                             # if the truck's package list contains the packages that are associated with the hub and the "En Route" status...
                         package.status = StatusType.delivered
                         package.deliveredTime = truck.date_time.time()
-                        print("unloaded package: ", package.packageID)
                 truck.destinations.remove(nearest[0])                                       # the closest hub (nearest[0]) is removed from the truck destinations variable
-                print("\n", truck.name, truck.milesTracker, truck.currentLocation, truck.date_time)
 
                 if truck.date_time > arrivalTime and changeStatus == False:                 # once one (1) truck date_time variable is greater than the arrivalTime variable (the time in which initially delayed packages are marked as "at the hub"),
                     changeStatus = True                                                     # the status of the packages that were initially delayed are changed to "at the hub"
@@ -321,16 +315,12 @@ def deliverClosestPackages(currentHub, truck):
                     truck2TravelBack = True                                             # this variable allows this if statement to only fire once
                     hub = getHubObjByName(truck.currentLocation)
                     distanceToMainHub = float(hub.distToHubs[mainHub])
-                    print("travelling to mainHub")
                     truck.milesTracker += distanceToMainHub
-                    print(truck.name, truck.milesTracker)
                     elapsedTimeMinutes = distanceToMainHub * (1 / truck.speedMPH) * 60
                     newTime = datetime.timedelta(minutes=elapsedTimeMinutes)
                     truck.setNewTime(newTime)
-                    print("arrived at mainHub")
                     for package in packageObjList:                                                      # this for loop will pick out all packages that have a remaining status of "at the hub" and have a specific deadline (i.e., not "EOD")
                         if package.status == StatusType.ready and package.deadline != "EOD":
-                            print(package.packageID)
                             truck.packageList.append(package)                                           # packages are amended to the truck's packageList variable
                             if not (truck.destinations.__contains__(packageAddressToHub(package.packageAddress))):  # if the truck destinations list does not already contain the hub address to be appended...append the hub address
                                 truck.destinations.append(packageAddressToHub(package.packageAddress))
@@ -342,15 +332,12 @@ def deliverClosestPackages(currentHub, truck):
                     truck1TravelBack = True                                         # this variable allows this if statement to only fire once
                     hub = getHubObjByName(truck1.currentLocation)
                     distanceToMainHub = float(hub.distToHubs[mainHub])
-                    print("truck 1 travelling to mainHub")
                     truck.milesTracker += distanceToMainHub
                     elapsedTimeMinutes = distanceToMainHub * (1 / truck.speedMPH) * 60
                     newTime = datetime.timedelta(minutes=elapsedTimeMinutes)
                     truck.setNewTime(newTime)
-                    print("truck 1 arrived at mainHub")
                     for package in packageObjList:                                                          # this for loop will pick out all packages that have a remaining status of "at the hub" and have do not have a specific deadline (i.e., "EOD")
                         if package.status == StatusType.ready and package.deadline == "EOD":
-                            print(package.packageID)
                             truck.packageList.append(package)                                               # packages are amended to the truck's packageList variable
                             if not (truck.destinations.__contains__(packageAddressToHub(package.packageAddress))): # if the truck destinations list does not already contain the hub address to be appended...append the hub address
                                 truck.destinations.append(packageAddressToHub(package.packageAddress))
@@ -386,30 +373,16 @@ def correctPackageMistake(packageID, correctedPackageLoc):
     truck2.packageList.append(packageToCorrect)                                     # this code block updates various information pertaining to truck 2 based on its travel to the current package location
     truck2.destinations.append(packageAddressToHub(correctedPackageLoc))
     truck2.currentLocation = packageAddressToHub(currentPackageLoc)
-    print("length of destinations", len(truck2.destinations), "miles: ", distance)
     packageToCorrect.status = StatusType.enroute                                    # package status changed to "En Route"
-    print("travelled to hub where package was delivered")
 
     deliverClosestPackages(truck2.currentLocation, truck2)                          # call to the deliverClosestPackages function to deliver the last package.
 
-    """# Code for travelling to corrected location
-    currentTruckLoc = packageAddressToHub(currentPackageLoc)
-    truck1.currentLocation = currentTruckLoc
-    hub = getHubObjByName(currentTruckLoc)
-    distance = float(hub.distToHubs[packageAddressToHub(correctedPackageLoc)])
-    truck1.milesTracker += distance
-    elapsedTimeMin = distance * (1 / truck1.speedMPH) * 60
-    newTime = datetime.timedelta(minutes=elapsedTimeMin)
-    truck1.setNewTime(newTime)
-    packageToCorrect.status = StatusType.delivered
-    print("Delivered to corrected location")"""
-
 
 # Load packages initially onto 2 trucks based on packages available for delivery
-loadPackages(hubList[0].hubName, truck2)            # load packages onto truck 2
-loadPackages(hubList[0].hubName, truck1)            # load packages onto truck 1
-deliverClosestPackages(hubList[0].hubName, truck1)  # deliver packages for truck 1
-deliverClosestPackages(hubList[0].hubName, truck2)  # deliver packages for truck 2
+loadPackages(mainHub, truck2)            # load packages onto truck 2
+loadPackages(mainHub, truck1)            # load packages onto truck 1
+deliverClosestPackages(mainHub, truck1)  # deliver packages for truck 1
+deliverClosestPackages(mainHub, truck2)  # deliver packages for truck 2
 correctPackageMistake(9, "410 S State St")          # correct delivery mistake for package 9
 
 def printPackageInfo(time, list):
@@ -422,11 +395,12 @@ def printPackageInfo(time, list):
             print("Package ID: " + package.packageID + "\nPackage Status at " + str(time) + ": " + StatusType.delivered + "; Delivered at: " + str(package.deliveredTime))
 def getUserInput():
     input1 = input("Welcome to the program. Please enter from the following options:\n" +
-          "1: The user will be prompted to enter a specific packageID (an integer between 1-40, inclusive) and a specific time (24 hour clock time). The output will tell them the status of the package at the desired time\n" +
+          "1: The user will be prompted to enter a specific packageID (an integer between 1-40, inclusive) and a \nspecific time (24 hour clock time). The output will tell them the status of the package at the desired time.\n" +
           "2: The output will show the user a snapshot of all packages at 9:20:00 AM\n" +
-          "3: The output will show the user a snapshot of all packages at 10:20:00 AM\n" +
+          "3: The output will show the user a snapshot of all packages at 10:15:00 AM\n" +
           "4: The output will show the user a snapshot of all packages at 12:30:00 AM\n" +
-          "5: Exit the application\n")
+          "5: The output will show the total mileage traveled by Truck 1 and Truck 2\n" +
+          "6: Exit the application\n")
     if int(input1) == 1:
         userInput = input("Please enter an integer number between 1-40, inclusive: ")
         userInput = int(userInput)
@@ -440,7 +414,7 @@ def getUserInput():
         listVar = packageObjList
         printPackageInfo(time, listVar)
     elif int(input1) == 3:
-        time = datetime.time(10, 20, 0)
+        time = datetime.time(10, 15, 0)
         listVar = packageObjList
         printPackageInfo(time, listVar)
     elif int(input1) == 4:
@@ -448,6 +422,11 @@ def getUserInput():
         listVar = packageObjList
         printPackageInfo(time, listVar)
     elif int(input1) == 5:
+        print("Truck 1 total mileage: " + str(round(truck1.milesTracker, 1)))
+        print("Truck 2 total mileage: " + str(round(truck2.milesTracker, 1)))
+        print("Total mileage between both trucks: " + str((round(truck1.milesTracker + truck2.milesTracker, 1))))
+
+    elif int(input1) == 6:
         sys.exit()
     getUserInput()
 
