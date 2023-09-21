@@ -64,7 +64,7 @@ class HashTable:
     hashTable = [[] for i in range(10)]    # custom hash table without using a dictionary (instead the hash table is a list of lists)
     # imports the WGUPS Package File
     import csv
-    with open('WGUPS Package File.csv') as csvfile:
+    with open('Package File.csv') as csvfile:
         csvreader = csv.reader(csvfile, delimiter=",")
         next(csvreader)  # skips over header row of CSV file
         for row in csvreader:  # creates a package object based on the provided file. If the file has the term "Delay" in the spcial notes, then the package's status is marked as delayed.
@@ -107,7 +107,7 @@ arr = [[0 for i in range(width)] for j in range(height)]  # creates a 28 x 28 ar
 # This section of code imports the WGUPS Distance Data and stores it into the arr array variable
 import csv
 
-with open('WGUPS Distance Table.csv') as csvfile:
+with open('Distance Table.csv') as csvfile:
     csvreader = csv.reader(csvfile, delimiter=',')
     count = 0
     for row in csvreader:  # this for loop populates the data from the csv file into the arr variable
